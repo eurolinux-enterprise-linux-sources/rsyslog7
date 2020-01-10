@@ -1,0 +1,61 @@
+From 72e7eac21c492fb8a63f486315936dfbd66f9b05 Mon Sep 17 00:00:00 2001
+From: Tomas Heinrich <theinric@redhat.com>
+Date: Fri, 3 Apr 2015 16:41:03 +0200
+Subject: [PATCH] Make llDestroy safe
+
+Keep the destructed list in a consistent state as the provided
+destructor may access the very same list again before llDestroy
+finishes.
+
+The previous approach could actually trigger a segmentation violation
+error for specific scenarios and configurations.
+In one particular case, destructing the list of rulesets lead to
+shutdown of an action DA queue and spooling its messages to disk which
+in turn triggered a search for the ruleset name of the message trought
+the destructed list.
+
+The change probably slightly degrades performace, but that shouldn't
+have an observable effect in the current code base.
+---
+ runtime/linkedlist.c | 16 +++++++++-------
+ 1 file changed, 9 insertions(+), 7 deletions(-)
+
+diff --git a/runtime/linkedlist.c b/runtime/linkedlist.c
+index 53aace4..df8b19f 100644
+--- a/runtime/linkedlist.c
++++ b/runtime/linkedlist.c
+@@ -90,22 +90,24 @@ rsRetVal llDestroy(linkedList_t *pThis)
+ {
+ 	DEFiRet;
+ 	llElt_t *pElt;
+-	llElt_t *pEltPrev;
+ 
+ 	assert(pThis != NULL);
+ 
+ 	pElt = pThis->pRoot;
+ 	while(pElt != NULL) {
+-		pEltPrev = pElt;
+-		pElt = pElt->pNext;
++		/* keep the list structure in a consistent state as
++		 * the destructor bellow may reference it again
++		 */
++		pThis->pRoot = pElt->pNext;
++		if(pElt->pNext == NULL)
++			pThis->pLast = NULL;
++
+ 		/* we ignore errors during destruction, as we need to try
+ 		 * finish the linked list in any case.
+ 		 */
+-		llDestroyElt(pThis, pEltPrev);
++		llDestroyElt(pThis, pElt);
++		pElt = pThis->pRoot;
+ 	}
+-	/* now clean up the pointers */
+-	pThis->pRoot = NULL;
+-	pThis->pLast = NULL;
+ 
+ 	RETiRet;
+ }
+-- 
+1.9.3
+

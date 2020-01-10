@@ -7,7 +7,7 @@
 Summary: Enhanced system logging and kernel message trapping daemon
 Name: rsyslog7
 Version: 7.4.10
-Release: 3%{?dist}.1
+Release: 5%{?dist}
 License: (GPLv3+ and ASL 2.0)
 Group: System Environment/Daemons
 URL: http://www.rsyslog.com/
@@ -16,6 +16,8 @@ Source1: rsyslog.init
 Source2: rsyslog.conf
 Source3: rsyslog.sysconfig
 Source4: rsyslog.log
+# snapshot of github.com/rsyslog/rsyslog-doc/tree/v7-stable
+Source5: rsyslog-doc-v7-stable-git8331beb.tar.gz
 Patch0: rsyslog-7.4.10-rhbz820311-debug-mode-description.patch
 Patch1: rsyslog-7.4.10-rhbz886117-numerical-uid-guid.patch
 Patch2: rsyslog-7.4.10-remove-liblogging-stdlog.patch
@@ -30,6 +32,10 @@ Patch10: rsyslog-7.4.10-rhbz1030206-add-mmcount.patch
 Patch11: rsyslog-7.4.10-rhbz1096732-imuxsock-socket-limit.patch
 Patch12: rsyslog-7.4.10-rhbz1142373-cve-2014-3634.patch
 Patch13: rsyslog-7.4.10-rhbz1202455-path-creation-race.patch
+Patch14: rsyslog-7.4.10-rhbz1224335-ruleset-crash.patch
+Patch15: rsyslog-7.4.10-rhbz1184722-maxMessageSize.patch
+Patch16: rsyslog-7.4.10-rhbz1122802-imfile-file-limit.patch
+Patch17: rsyslog-7.4.10-rhbz1263518-imudp-rcvbufsize.patch
 BuildRequires: bison
 BuildRequires: flex
 BuildRequires: json-c-devel
@@ -79,6 +85,8 @@ Group: System Environment/Daemons
 Requires: %name = %version-%release
 # earlier versions segfault if KEEPALIVE is enabled
 BuildRequires: librelp-devel >= 1.2.7-2
+# an explicit Requires due to wrong soname
+Requires: librelp >= 1.2.7-2
 
 %package gnutls
 Summary: TLS protocol support for rsyslog
@@ -133,6 +141,7 @@ ability to send syslog messages as SNMPv1 and SNMPv2c traps.
 
 %prep
 %setup -q -n rsyslog-%{version}
+%setup -q -a 5 -T -D -n rsyslog-%{version}
 %patch0 -p1 -b .rhbz820311
 %patch1 -p1 -b .rhbz886117
 %patch2 -p1 -b .liblogging-stdlog
@@ -147,6 +156,10 @@ ability to send syslog messages as SNMPv1 and SNMPv2c traps.
 %patch11 -p1 -b .rhbz1096732
 %patch12 -p1 -b .rhbz1142373
 %patch13 -p1 -b .rhbz1202455
+%patch14 -p1 -b .rhbz1224335
+%patch15 -p1 -b .rhbz1184722
+%patch16 -p1 -b .rhbz1122802
+%patch17 -p1 -b .rhbz1263518
 
 %build
 # workaround for mysql_conf multilib issue, bug #694414
@@ -208,16 +221,6 @@ rm $RPM_BUILD_ROOT/%{_libdir}/rsyslog/*.la
 # convert line endings from "\r\n" to "\n"
 cat tools/recover_qi.pl | tr -d '\r' > $RPM_BUILD_ROOT%{_bindir}/rsyslog-recover-qi.pl
 
-# get rid of unused images
-rm -f \
-	doc/queue_msg_state.jpeg \
-	doc/rsyslog-vers.png \
-	doc/rsyslog_queue_pointers.jpeg \
-	doc/rsyslog_queue_pointers2.jpeg \
-	doc/tls_cert.jpg \
-	doc/tls_cert_100.jpg \
-	doc/tls_cert_ca.jpg \
-
 %post
 /sbin/chkconfig --add rsyslog
 for n in /var/log/{messages,secure,maillog,spooler}
@@ -246,8 +249,8 @@ mv /var/lock/subsys/rsyslogd /var/lock/subsys/rsyslog
 
 %files
 %defattr(-,root,root,-)
-%doc AUTHORS COPYING* ChangeLog NEWS README
-%doc doc/*html doc/*.jpg doc/*.png
+%doc AUTHORS COPYING* ChangeLog README
+%doc rsyslog-doc-*/*
 %dir %{_libdir}/rsyslog
 %{_libdir}/rsyslog/imdiag.so
 %{_libdir}/rsyslog/imklog.so
@@ -324,9 +327,29 @@ mv /var/lock/subsys/rsyslogd /var/lock/subsys/rsyslog
 %{_libdir}/rsyslog/omsnmp.so
 
 %changelog
-* Wed Nov 25 2015 Tomas Heinrich <theinric@redhat.com> 7.4.10-3.el6_7.1
+* Mon Mar 07 2016 Tomas Heinrich <theinric@redhat.com> 7.4.10-5
+- add a patch to enable setting SO_RCVBUF on imudp sockets
+  resolves: rhbz#1263518
+
+* Wed Nov 25 2015 Tomas Heinrich <theinric@redhat.com> 7.4.10-4
 - add a patch to fix a race condition in directory creation
   resolves: rhbz#1202455
+- add a patch to prevent crashes when using multiple rulesets
+  resolves: rhbz#1224335
+- add a patch to fix an undefined behavior caused by the maxMessageSize directive
+  resolves: rhbz#1184722
+- add a patch to remove a limit on number of sources in imfile
+  resolves: rhbz#1122802
+- add an explicit, versioned requirement on librelp to work
+  around an incorrect soname
+  resolves: rhbz#1191680
+- make logrotate tolerate missing log files
+  resolves: rhbz#1252909
+- replace bundled docs with updated upstream documentation
+  remove reference to queue.spoolDirectory
+  drop empty NEWS file
+  resolves: rhbz#1238451
+  resolves: rhbz#1243293
 
 * Thu Oct 09 2014 Tomas Heinrich <theinric@redhat.com> 7.4.10-3
 - fix CVE-2014-3634

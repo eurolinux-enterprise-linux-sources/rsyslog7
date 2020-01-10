@@ -1,0 +1,163 @@
+From b72cb5dd5c2ad90e3d7e04a0870c9bf003888009 Mon Sep 17 00:00:00 2001
+From: Tomas Heinrich <theinric@redhat.com>
+Date: Mon, 7 Mar 2016 10:40:26 +0100
+Subject: [PATCH] imudp: add ability to specify SO_RCVBUF size (rcvbufSize
+ parameter)
+
+Backported from 38aa077c.
+---
+ plugins/imudp/imudp.c           |  9 +++++++--
+ plugins/omudpspoof/omudpspoof.c |  2 +-
+ runtime/net.c                   | 35 ++++++++++++++++++++++++++++++++++-
+ runtime/net.h                   |  2 +-
+ tools/omfwd.c                   |  2 +-
+ 5 files changed, 44 insertions(+), 6 deletions(-)
+
+diff --git a/plugins/imudp/imudp.c b/plugins/imudp/imudp.c
+index a5ba6a2..de7f4c1 100644
+--- a/plugins/imudp/imudp.c
++++ b/plugins/imudp/imudp.c
+@@ -112,6 +112,7 @@ struct instanceConf_s {
+ 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
+ 	int ratelimitInterval;
+ 	int ratelimitBurst;
++	int rcvbuf;			/* 0 means: do not set, keep OS default */
+ 	struct instanceConf_s *next;
+ 	sbool bAppendPortToInpname;
+ };
+@@ -148,7 +149,8 @@ static struct cnfparamdescr inppdescr[] = {
+ 	{ "address", eCmdHdlrString, 0 },
+ 	{ "ruleset", eCmdHdlrString, 0 },
+ 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
+-	{ "ratelimit.burst", eCmdHdlrInt, 0 }
++	{ "ratelimit.burst", eCmdHdlrInt, 0 },
++	{ "rcvbufsize", eCmdHdlrSize, 0 }
+ };
+ static struct cnfparamblk inppblk =
+ 	{ CNFPARAMBLK_VERSION,
+@@ -177,6 +179,7 @@ createInstance(instanceConf_t **pinst)
+ 	inst->bAppendPortToInpname = 0;
+ 	inst->ratelimitBurst = 10000; /* arbitrary high limit */
+ 	inst->ratelimitInterval = 0; /* off */
++	inst->rcvbuf = 0;
+ 
+ 	/* node created, let's add to config */
+ 	if(loadModConf->tail == NULL) {
+@@ -252,7 +255,7 @@ addListner(instanceConf_t *inst)
+ 
+ 	DBGPRINTF("Trying to open syslog UDP ports at %s:%s.\n", bindName, inst->pszBindPort);
+ 
+-	newSocks = net.create_udp_socket(bindAddr, port, 1);
++	newSocks = net.create_udp_socket(bindAddr, port, 1, inst->rcvbuf);
+ 	if(newSocks != NULL) {
+ 		/* we now need to add the new sockets to the existing set */
+ 		/* ready to copy */
+@@ -729,6 +732,8 @@ createListner(es_str_t *port, struct cnfparamvals *pvals)
+ 			inst->ratelimitBurst = (int) pvals[i].val.d.n;
+ 		} else if(!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
+ 			inst->ratelimitInterval = (int) pvals[i].val.d.n;
++		} else if(!strcmp(inppblk.descr[i].name, "rcvbufsize")) {
++			inst->rcvbuf = (int) pvals[i].val.d.n;
+ 		} else {
+ 			dbgprintf("imudp: program error, non-handled "
+ 			  "param '%s'\n", inppblk.descr[i].name);
+diff --git a/plugins/omudpspoof/omudpspoof.c b/plugins/omudpspoof/omudpspoof.c
+index c80f0e5..058c425 100644
+--- a/plugins/omudpspoof/omudpspoof.c
++++ b/plugins/omudpspoof/omudpspoof.c
+@@ -563,7 +563,7 @@ static rsRetVal doTryResume(instanceData *pData)
+ 	}
+ 	DBGPRINTF("%s found, resuming.\n", pData->host);
+ 	pData->f_addr = res;
+-	pData->pSockArray = net.create_udp_socket((uchar*)pData->host, NULL, 0);
++	pData->pSockArray = net.create_udp_socket((uchar*)pData->host, NULL, 0, 0);
+ 
+ finalize_it:
+ 	if(iRet != RS_RET_OK) {
+diff --git a/runtime/net.c b/runtime/net.c
+index 13391cc..4d272f1 100644
+--- a/runtime/net.c
++++ b/runtime/net.c
+@@ -1189,12 +1189,16 @@ void closeUDPListenSockets(int *pSockArr)
+  * hostname and/or pszPort may be NULL, but not both!
+  * bIsServer indicates if a server socket should be created
+  * 1 - server, 0 - client
++ * param rcvbuf indicates desired rcvbuf size; 0 means OS default
+  */
+-int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
++int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer, int rcvbuf)
+ {
+         struct addrinfo hints, *res, *r;
+         int error, maxs, *s, *socks, on = 1;
+ 	int sockflags;
++	int actrcvbuf;
++	socklen_t optlen;
++	char errStr[1024];
+ 
+ 	assert(!((pszPort == NULL) && (hostname == NULL)));
+         memset(&hints, 0, sizeof(hints));
+@@ -1297,6 +1301,35 @@ int *create_udp_socket(uchar *hostname, uchar *pszPort, int bIsServer)
+ 			continue;
+ 		}
+ 
++		if(rcvbuf != 0) {
++#			if defined(SO_RCVBUFFORCE)
++			if(setsockopt(*s, SOL_SOCKET, SO_RCVBUFFORCE, &rcvbuf, sizeof(rcvbuf)) < 0)
++#			endif
++			{
++				/* if we fail, try to do it the regular way. Experiments show that at 
++				 * least some platforms do not return an error here, but silently set
++				 * it to the max permitted value. So we do our error check a bit
++				 * differently by querying the size below.
++				 */
++				setsockopt(*s, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
++			}
++		}
++
++		if(Debug || rcvbuf != 0) {
++			optlen = sizeof(actrcvbuf);
++			if(getsockopt(*s, SOL_SOCKET, SO_RCVBUF, &actrcvbuf, &optlen) == 0) {
++				dbgprintf("socket %d, actual os socket rcvbuf size %d\n", *s, actrcvbuf);
++				if(rcvbuf != 0 && actrcvbuf/2 != rcvbuf) {
++					errmsg.LogError(errno, NO_ERRCODE,
++						"cannot set os socket rcvbuf size %d for socket %d, value now is %d",
++						rcvbuf, *s, actrcvbuf/2);
++				}
++			} else {
++				dbgprintf("could not obtain os socket rcvbuf size for socket %d: %s\n",
++					*s, rs_strerror_r(errno, errStr, sizeof(errStr)));
++			}
++		}
++
+ 		if(bIsServer) {
+ 			/* rgerhards, 2007-06-22: if we run on a kernel that does not support
+ 			 * the IPV6_V6ONLY socket option, we need to use a work-around. On such
+diff --git a/runtime/net.h b/runtime/net.h
+index b196116..d7a7b51 100644
+--- a/runtime/net.h
++++ b/runtime/net.h
+@@ -137,7 +137,7 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
+ 	void (*PrintAllowedSenders)(int iListToPrint);
+ 	void (*clearAllowedSenders)(uchar*);
+ 	void (*debugListenInfo)(int fd, char *type);
+-	int *(*create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer);
++	int *(*create_udp_socket)(uchar *hostname, uchar *LogPort, int bIsServer, int rcvbuf);
+ 	void (*closeUDPListenSockets)(int *finet);
+ 	int (*isAllowedSender)(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost); /* deprecated! */
+ 	rsRetVal (*getLocalHostname)(uchar**);
+diff --git a/tools/omfwd.c b/tools/omfwd.c
+index 129392d..a7f8bf7 100644
+--- a/tools/omfwd.c
++++ b/tools/omfwd.c
+@@ -576,7 +576,7 @@ static rsRetVal doTryResume(instanceData *pData)
+ 		pData->f_addr = res;
+ 		pData->bIsConnected = 1;
+ 		if(pData->pSockArray == NULL) {
+-			pData->pSockArray = net.create_udp_socket((uchar*)pData->target, NULL, 0);
++			pData->pSockArray = net.create_udp_socket((uchar*)pData->target, NULL, 0, 0);
+ 		}
+ 	} else {
+ 		CHKiRet(TCPSendInit((void*)pData));
+-- 
+2.5.0
+

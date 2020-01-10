@@ -1,0 +1,135 @@
+From d6e98847e74ba4e1a30f0adf0b61e276e279e211 Mon Sep 17 00:00:00 2001
+From: Rainer Gerhards <rgerhards@adiscon.com>
+Date: Tue, 13 Jan 2015 09:54:41 +0100
+Subject: [PATCH] Fix maxMessageSize global parameter handling
+
+Patch derived from upstream.
+
+- bugfix: invalid data size for iMaxLine global property
+  It was defined as int, but inside the config system it was declared as
+  size type, which uses int64_t. With legacy config statements, this could
+  lead to misadressing, which usually meant that another config variable was
+  overwritten (depending on memory layout).
+  closes https://github.com/rsyslog/rsyslog/issues/205
+- bugfix: negative values for maxMessageSize global parameter were permitted
+---
+ runtime/glbl.c | 39 ++++++++++++++++++++++++++++++++++-----
+ runtime/glbl.h |  4 ++--
+ 2 files changed, 36 insertions(+), 7 deletions(-)
+
+diff --git a/runtime/glbl.c b/runtime/glbl.c
+index f2fcbe1..6a57a1f 100644
+--- a/runtime/glbl.c
++++ b/runtime/glbl.c
+@@ -116,6 +116,12 @@ static struct cnfparamvals *cnfparamvals = NULL;
+  * each time a new config load begins (TODO: create interface?)
+  */
+ 
++static int
++GetMaxLine(void)
++{
++	return(iMaxLine);
++}
++
+ /* define a macro for the simple properties' set and get functions
+  * (which are always the same). This is only suitable for pretty
+  * simple cases which require neither checks nor memory allocation.
+@@ -138,7 +144,6 @@ static dataType Get##nameFunc(void) \
+ SIMP_PROP(ParseHOSTNAMEandTAG, bParseHOSTNAMEandTAG, int)
+ SIMP_PROP(OptimizeUniProc, bOptimizeUniProc, int)
+ SIMP_PROP(PreserveFQDN, bPreserveFQDN, int)
+-SIMP_PROP(MaxLine, iMaxLine, int)
+ SIMP_PROP(DefPFFamily, iDefPFFamily, int) /* note that in the future we may check the family argument */
+ SIMP_PROP(DropMalPTRMsgs, bDropMalPTRMsgs, int)
+ SIMP_PROP(Option_DisallowWarning, option_DisallowWarning, int)
+@@ -282,6 +287,31 @@ finalize_it:
+ }
+ 
+ 
++/* This function is used both by legacy and RainerScript conf. It is a real setter. */
++static void
++setMaxLine(const int64_t iNew)
++{
++	if(iNew < 128) {
++		errmsg.LogError(0, RS_RET_INVALID_VALUE, "maxMessageSize tried to set "
++				"to %lld, but cannot be less than 128 - set to 128 "
++				"instead", (long long) iNew);
++		iMaxLine = 128;
++	} else if(iNew > (int64_t) INT_MAX) {
++		errmsg.LogError(0, RS_RET_INVALID_VALUE, "maxMessageSize larger than "
++				"INT_MAX (%d) - reduced to INT_MAX", INT_MAX);
++		iMaxLine = INT_MAX;
++	} else {
++		iMaxLine = (int) iNew;
++	}
++}
++
++static rsRetVal
++legacySetMaxMessageSize(void __attribute__((unused)) *pVal, int64_t iNew)
++{
++	setMaxLine(iNew);
++	return RS_RET_OK;
++}
++
+ static rsRetVal
+ setDebugFile(void __attribute__((unused)) *pVal, uchar *pNewVal)
+ {
+@@ -534,10 +565,10 @@ CODESTARTobjQueryInterface(glbl)
+ 	pIf->GetLocalHostIP = GetLocalHostIP;
+ 	pIf->SetGlobalInputTermination = SetGlobalInputTermination;
+ 	pIf->GetGlobalInputTermState = GetGlobalInputTermState;
++	pIf->GetMaxLine = GetMaxLine;
+ #define SIMP_PROP(name) \
+ 	pIf->Get##name = Get##name; \
+ 	pIf->Set##name = Set##name;
+-	SIMP_PROP(MaxLine);
+ 	SIMP_PROP(OptimizeUniProc);
+ 	SIMP_PROP(ParseHOSTNAMEandTAG);
+ 	SIMP_PROP(PreserveFQDN);
+@@ -664,7 +694,7 @@ glblDoneLoadCnf(void)
+ 				"dropmsgswithmaliciousdnsptrrecords")) {
+ 			bDropMalPTRMsgs = (int) cnfparamvals[i].val.d.n;
+ 		} else if(!strcmp(paramblk.descr[i].name, "maxmessagesize")) {
+-			iMaxLine = (int) cnfparamvals[i].val.d.n;
++			setMaxLine(cnfparamvals[i].val.d.n);
+ 		} else {
+ 			dbgprintf("glblDoneLoadCnf: program error, non-handled "
+ 			  "param '%s'\n", paramblk.descr[i].name);
+@@ -696,8 +726,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
+ 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostipif", 0, eCmdHdlrGetWord, setLocalHostIPIF, NULL, NULL));
+ 	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrBinary, NULL, &bOptimizeUniProc, NULL));
+ 	CHKiRet(regCfSysLineHdlr((uchar *)"preservefqdn", 0, eCmdHdlrBinary, NULL, &bPreserveFQDN, NULL));
+-	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize,
+-		NULL, &iMaxLine, NULL));
++	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, legacySetMaxMessageSize, NULL, NULL));
+ 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
+ 
+ 	INIT_ATOMIC_HELPER_MUT(mutTerminateInputs);
+diff --git a/runtime/glbl.h b/runtime/glbl.h
+index 14fefb0..9d1ccce 100644
+--- a/runtime/glbl.h
++++ b/runtime/glbl.h
+@@ -41,10 +41,10 @@ extern int bProcessInternalMessages;
+ /* interfaces */
+ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
+ 	uchar* (*GetWorkDir)(void);
++	int (*GetMaxLine)(void);
+ #define SIMP_PROP(name, dataType) \
+ 	dataType (*Get##name)(void); \
+ 	rsRetVal (*Set##name)(dataType);
+-	SIMP_PROP(MaxLine, int)
+ 	SIMP_PROP(OptimizeUniProc, int)
+ 	SIMP_PROP(PreserveFQDN, int)
+ 	SIMP_PROP(DefPFFamily, int)
+@@ -83,7 +83,7 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
+ 	prop_t* (*GetLocalHostIP)(void);
+ #undef	SIMP_PROP
+ ENDinterface(glbl)
+-#define glblCURR_IF_VERSION 7 /* increment whenever you change the interface structure! */
++#define glblCURR_IF_VERSION 9 /* increment whenever you change the interface structure! */
+ /* version 2 had PreserveFQDN added - rgerhards, 2008-12-08 */
+ 
+ /* the remaining prototypes */
+-- 
+1.9.3
+
