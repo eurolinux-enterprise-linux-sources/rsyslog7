@@ -1,0 +1,49 @@
+diff -up ./plugins/imudp/imudp.c.ipv6-warning ./plugins/imudp/imudp.c
+--- ./plugins/imudp/imudp.c.ipv6-warning	2016-10-24 11:26:00.105999978 -0400
++++ ./plugins/imudp/imudp.c	2016-10-24 11:27:05.373999981 -0400
+@@ -615,6 +615,8 @@ rsRetVal rcvMainLoop(thrdInfo_t *pThrd)
+ 	i = 0;
+ 	for(lstn = lcnfRoot ; lstn != NULL ; lstn = lstn->next) {
+ 		if(lstn->sock != -1) {
++			if(Debug)
++				net.debugListenInfo(lstn->sock, "UDP");
+ 			udpEPollEvt[i].events = EPOLLIN | EPOLLET;
+ 			udpEPollEvt[i].data.ptr = lstn;
+ 			if(epoll_ctl(efd, EPOLL_CTL_ADD,  lstn->sock, &(udpEPollEvt[i])) < 0) {
+diff -up ./runtime/net.c.ipv6-warning ./runtime/net.c
+--- ./runtime/net.c.ipv6-warning	2016-10-24 11:22:58.425999979 -0400
++++ ./runtime/net.c	2016-10-24 11:22:58.435999979 -0400
+@@ -1083,22 +1083,23 @@ void debugListenInfo(int fd, char *type)
+ {
+ 	char *szFamily;
+ 	int port;
+-	struct sockaddr sa;
+-	struct sockaddr_in *ipv4;
+-	struct sockaddr_in6 *ipv6;
+-	socklen_t saLen = sizeof(sa);
++	union sock_data {
++		struct sockaddr sa;
++		struct sockaddr_in ipv4;
++		struct sockaddr_in6 ipv6;
++	} sock_u;
+ 
+-	if(getsockname(fd, &sa, &saLen) == 0) {
+-		switch(sa.sa_family) {
++	socklen_t saLen = sizeof(sock_u.sa);
++
++	if(getsockname(fd, &sock_u.sa, &saLen) == 0) {
++		switch(sock_u.sa.sa_family) {
+ 		case PF_INET:
+ 			szFamily = "IPv4";
+-			ipv4 = (struct sockaddr_in*)(void*) &sa;
+-			port = ntohs(ipv4->sin_port);
++			port = ntohs(sock_u.ipv4.sin_port);
+ 			break;
+ 		case PF_INET6:
+ 			szFamily = "IPv6";
+-			ipv6 = (struct sockaddr_in6*)(void*) &sa;
+-			port = ntohs(ipv6->sin6_port);
++			port = ntohs(sock_u.ipv6.sin6_port);
+ 			break;
+ 		default:
+ 			szFamily = "other";

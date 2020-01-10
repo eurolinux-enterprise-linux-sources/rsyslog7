@@ -1,0 +1,36 @@
+diff -up ./runtime/nsd_gtls.c.rhbz1323199 ./runtime/nsd_gtls.c
+--- ./runtime/nsd_gtls.c.rhbz1323199	2014-02-04 13:06:57.000000000 +0100
++++ ./runtime/nsd_gtls.c	2016-10-20 15:09:19.211597722 +0200
+@@ -623,13 +623,14 @@ gtlsInitSession(nsd_gtls_t *pThis)
+ 	DEFiRet;
+ 	int gnuRet;
+ 	gnutls_session session;
++	const char *unused;
+ 
+ 	gnutls_init(&session, GNUTLS_SERVER);
+ 	pThis->bHaveSess = 1;
+ 	pThis->bIsInitiator = 0;
+ 
+ 	/* avoid calling all the priority functions, since the defaults are adequate. */
+-	CHKgnutls(gnutls_set_default_priority(session));
++	CHKgnutls(gnutls_priority_set_direct(session, "NORMAL:+VERS-TLS1.2", &unused));
+ 	CHKgnutls(gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE, xcred));
+ 
+ 	/* request client certificate if any.  */
+@@ -1601,6 +1602,7 @@ Connect(nsd_t *pNsd, int family, uchar *
+ 	int gnuRet;
+ 	/* TODO: later? static const int cert_type_priority[3] = { GNUTLS_CRT_X509, GNUTLS_CRT_OPENPGP, 0 };*/
+ 	static const int cert_type_priority[2] = { GNUTLS_CRT_X509, 0 };
++	const char *unused;
+ 	DEFiRet;
+ 
+ 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+@@ -1631,7 +1633,7 @@ Connect(nsd_t *pNsd, int family, uchar *
+ 	}
+ 
+ 	/* Use default priorities */
+-	CHKgnutls(gnutls_set_default_priority(pThis->sess));
++	CHKgnutls(gnutls_priority_set_direct(pThis->sess, "NORMAL:+VERS-TLS1.2", &unused));
+ 	CHKgnutls(gnutls_certificate_type_set_priority(pThis->sess, cert_type_priority));
+ 
+ 	/* put the x509 credentials to the current session */

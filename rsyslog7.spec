@@ -7,7 +7,7 @@
 Summary: Enhanced system logging and kernel message trapping daemon
 Name: rsyslog7
 Version: 7.4.10
-Release: 5%{?dist}
+Release: 7%{?dist}
 License: (GPLv3+ and ASL 2.0)
 Group: System Environment/Daemons
 URL: http://www.rsyslog.com/
@@ -36,6 +36,8 @@ Patch14: rsyslog-7.4.10-rhbz1224335-ruleset-crash.patch
 Patch15: rsyslog-7.4.10-rhbz1184722-maxMessageSize.patch
 Patch16: rsyslog-7.4.10-rhbz1122802-imfile-file-limit.patch
 Patch17: rsyslog-7.4.10-rhbz1263518-imudp-rcvbufsize.patch
+Patch18: rsyslog-7.4.10-rhbz1323199-tls-rebase.patch
+Patch19: rsyslog-7.4.10-rhbz1388420-fix-net-warning.patch
 BuildRequires: bison
 BuildRequires: flex
 BuildRequires: json-c-devel
@@ -160,6 +162,8 @@ ability to send syslog messages as SNMPv1 and SNMPv2c traps.
 %patch15 -p1 -b .rhbz1184722
 %patch16 -p1 -b .rhbz1122802
 %patch17 -p1 -b .rhbz1263518
+%patch18 -p1 -b .rhbz1323199
+%patch19 -p1 -b .rhbz1388420
 
 %build
 # workaround for mysql_conf multilib issue, bug #694414
@@ -327,6 +331,15 @@ mv /var/lock/subsys/rsyslogd /var/lock/subsys/rsyslog
 %{_libdir}/rsyslog/omsnmp.so
 
 %changelog
+* Mon Oct 24 2016 Radovan Sroka <rsroka@redhat.com> 7.4.10-7
+- fix warning in net.c in debug mode
+- added rsyslog-7.4.10-fix-net-warning.patch
+  resolves: rhbz#1388420
+
+* Thu Oct 20 2016 Radovan Sroka <rsroka@redhat.com> 7.4.10-6
+- add patch to enable TLS1_2 explicitly
+  resolves: rhbz#1323199
+
 * Mon Mar 07 2016 Tomas Heinrich <theinric@redhat.com> 7.4.10-5
 - add a patch to enable setting SO_RCVBUF on imudp sockets
   resolves: rhbz#1263518
