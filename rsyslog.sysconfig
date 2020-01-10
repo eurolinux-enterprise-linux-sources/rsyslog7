@@ -1,0 +1,3 @@
+# Options for rsyslogd
+# See rsyslogd(8) for more details
+SYSLOGD_OPTIONS=""

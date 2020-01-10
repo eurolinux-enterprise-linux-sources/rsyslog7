@@ -1,0 +1,121 @@
+Addapted from:
+
+From 02da275527f94c9dbc7bbfa2bc028d265867b762 Mon Sep 17 00:00:00 2001
+From: Rainer Gerhards <rgerhards@adiscon.com>
+Date: Tue, 10 Dec 2013 17:01:43 +0100
+Subject: [PATCH] imrelp: support for TCP KEEPALIVE added
+
+diff --git a/doc/imrelp.html b/doc/imrelp.html
+index f7fcc4b..68a8d47 100644
+--- a/doc/imrelp.html
++++ b/doc/imrelp.html
+@@ -32,6 +32,25 @@ Clients send messages to the RELP server via omrelp.</p>
+ <ul>
+ <li><b>Port</b> &lt;port&gt;<br>
+ Starts a RELP server on selected port</li>
++<li><b>KeepAlive</b> &lt;on/<b>off</b>&gt; (available in 8.1.4+)<br>
++enable of disable keep-alive packets at the tcp socket layer. The default is
++to disable them.</li>
++<li><b>KeepAlive.Probes</b> &lt;number&gt; (available in 8.1.4+)<br>
++The number of unacknowledged probes to send before considering the connection dead and notifying the application layer.
++The default, 0, means that the operating system defaults are used. This has only 
++effect if keep-alive is enabled. The functionality may not be available on
++all platforms.
++<li><b>KeepAlive.Interval</b> &lt;number&gt; (available in 8.1.4+)<br>
++The interval between subsequent keepalive probes, regardless of what the connection has exchanged in the meantime.
++The default, 0, means that the operating system defaults are used. This has only 
++effect if keep-alive is enabled. The functionality may not be available on
++all platforms.
++<li><b>KeepAlive.Time</b> &lt;number&gt; (available in 8.1.4+)<br>
++The interval between the last data packet sent (simple ACKs are not considered data) and the first keepalive probe; after the connection is marked to need keepalive, this counter is not used any further.
++The default, 0, means that the operating system defaults are used. This has only 
++effect if keep-alive is enabled. The functionality may not be available on
++all platforms.
++</li>
+ </ul>
+ <b>Caveats/Known Bugs:</b>
+ <ul>
+diff --git a/plugins/imrelp/imrelp.c b/plugins/imrelp/imrelp.c
+index 5e0ae55..bee334f 100644
+--- a/plugins/imrelp/imrelp.c
++++ b/plugins/imrelp/imrelp.c
+@@ -74,6 +74,10 @@ static struct configSettings_s {
+ 
+ struct instanceConf_s {
+ 	uchar *pszBindPort;		/* port to bind to */
++	sbool bKeepAlive;		/* support keep-alive packets */
++	int iKeepAliveIntvl;
++	int iKeepAliveProbes;
++	int iKeepAliveTime;
+ 	struct instanceConf_s *next;
+ };
+ 
+@@ -90,7 +94,11 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current lo
+ 
+ /* input instance parameters */
+ static struct cnfparamdescr inppdescr[] = {
+-	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED }
++	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED },
++	{ "keepalive", eCmdHdlrBinary, 0 },
++	{ "keepalive.probes", eCmdHdlrInt, 0 },
++	{ "keepalive.time", eCmdHdlrInt, 0 },
++	{ "keepalive.interval", eCmdHdlrInt, 0 },
+ };
+ static struct cnfparamblk inppblk =
+ 	{ CNFPARAMBLK_VERSION,
+@@ -155,6 +163,10 @@ createInstance(instanceConf_t **pinst)
+ 	inst->next = NULL;
+ 
+ 	inst->pszBindPort = NULL;
++	inst->bKeepAlive = 0;
++	inst->iKeepAliveIntvl = 0;
++	inst->iKeepAliveProbes = 0;
++	inst->iKeepAliveTime = 0;
+ 
+ 	/* node created, let's add to config */
+ 	if(loadModConf->tail == NULL) {
+@@ -204,6 +216,8 @@ finalize_it:
+ static rsRetVal
+ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
+ {
++	relpSrv_t *pSrv;
++	int relpRet;
+ 	DEFiRet;
+ 	if(pRelpEngine == NULL) {
+ 		CHKiRet(relpEngineConstruct(&pRelpEngine));
+@@ -216,7 +230,16 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
+ 		}
+ 	}
+ 
+-	CHKiRet(relpEngineAddListner(pRelpEngine, inst->pszBindPort));
++	CHKiRet(relpEngineListnerConstruct(pRelpEngine, &pSrv));
++	CHKiRet(relpSrvSetLstnPort(pSrv, inst->pszBindPort));
++	relpSrvSetKeepAlive(pSrv, inst->bKeepAlive, inst->iKeepAliveIntvl,
++			    inst->iKeepAliveProbes, inst->iKeepAliveTime);
++	relpRet = relpEngineListnerConstructFinalize(pRelpEngine, pSrv);
++	if(relpRet != RELP_RET_OK) {
++		errmsg.LogError(0, RS_RET_RELP_ERR,
++				"imrelp: could not activate relp listner, code %d", relpRet);
++		ABORT_FINALIZE(RS_RET_RELP_ERR);
++	}
+ 
+ finalize_it:
+ 	RETiRet;
+@@ -249,6 +272,14 @@ CODESTARTnewInpInst
+ 			continue;
+ 		if(!strcmp(inppblk.descr[i].name, "port")) {
+ 			inst->pszBindPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
++		} else if(!strcmp(inppblk.descr[i].name, "keepalive")) {
++			inst->bKeepAlive = (sbool) pvals[i].val.d.n;
++		} else if(!strcmp(inppblk.descr[i].name, "keepalive.probes")) {
++			inst->iKeepAliveProbes = (int) pvals[i].val.d.n;
++		} else if(!strcmp(inppblk.descr[i].name, "keepalive.time")) {
++			inst->iKeepAliveTime = (int) pvals[i].val.d.n;
++		} else if(!strcmp(inppblk.descr[i].name, "keepalive.interval")) {
++			inst->iKeepAliveIntvl = (int) pvals[i].val.d.n;
+ 		} else {
+ 			dbgprintf("imrelp: program error, non-handled "
+ 			  "param '%s'\n", inppblk.descr[i].name);
+-- 
+1.9.0
+

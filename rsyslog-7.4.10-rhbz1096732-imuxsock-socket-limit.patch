@@ -1,0 +1,211 @@
+From 6076c7c515df4ef232fba454f6b660bec7630234 Mon Sep 17 00:00:00 2001
+From: Rainer Gerhards <rgerhards@adiscon.com>
+Date: Wed, 18 Sep 2013 12:13:37 +0200
+Subject: [PATCH] imuxsock: handle unlimited number of additional listen
+ sockets
+
+At the same time, (very) slightly remove memory footprint when
+few listeners are monitored.
+---
+ plugins/imuxsock/imuxsock.c | 123 +++++++++++++++++++++++---------------------
+ 1 file changed, 63 insertions(+), 60 deletions(-)
+
+diff --git a/plugins/imuxsock/imuxsock.c b/plugins/imuxsock/imuxsock.c
+index 3c30501..6b02af9 100644
+--- a/plugins/imuxsock/imuxsock.c
++++ b/plugins/imuxsock/imuxsock.c
+@@ -62,7 +62,6 @@ MODULE_TYPE_NOKEEP
+ MODULE_CNFNAME("imuxsock")
+ 
+ /* defines */
+-#define MAXFUNIX	50
+ #ifndef _PATH_LOG
+ #ifdef BSD
+ #define _PATH_LOG	"/var/run/log"
+@@ -148,7 +147,7 @@ typedef struct lstn_s {
+ 	sbool bUseSysTimeStamp;	/* use timestamp from system (instead of from message) */
+ 	sbool bUnlink;		/* unlink&re-create socket at start and end of processing */
+ } lstn_t;
+-static lstn_t listeners[MAXFUNIX];
++static lstn_t *listeners;
+ 
+ static prop_t *pLocalHostIP = NULL;	/* there is only one global IP for all internally-generated messages */
+ static prop_t *pInputName = NULL;	/* our inputName currently is always "imudp", and this will hold it */
+@@ -360,12 +359,7 @@ finalize_it:
+ }
+ 
+ 
+-/* add an additional listen socket. Socket names are added
+- * until the array is filled up. It is never reset, only at
+- * module unload.
+- * TODO: we should change the array to a list so that we
+- * can support any number of listen socket names.
+- * rgerhards, 2007-12-20
++/* add an additional listen socket. 
+  * added capability to specify hostname for socket -- rgerhards, 2008-08-01
+  */
+ static rsRetVal
+@@ -373,53 +367,50 @@ addListner(instanceConf_t *inst)
+ {
+ 	DEFiRet;
+ 
+-	if(nfd < MAXFUNIX) {
+-		if(*inst->sockName == ':') {
+-			listeners[nfd].bParseHost = 1;
+-		} else {
+-			listeners[nfd].bParseHost = 0;
+-		}
+-		if(inst->pLogHostName == NULL) {
+-			listeners[nfd].hostName = NULL;
+-		} else {
+-			CHKiRet(prop.Construct(&(listeners[nfd].hostName)));
+-			CHKiRet(prop.SetString(listeners[nfd].hostName, inst->pLogHostName, ustrlen(inst->pLogHostName)));
+-			CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
+-		}
+-		if(inst->ratelimitInterval > 0) {
+-			if((listeners[nfd].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn,
+-				(void(*)(void*))ratelimitDestruct)) == NULL) {
+-				/* in this case, we simply turn off rate-limiting */
+-				DBGPRINTF("imuxsock: turning off rate limiting because we could not "
+-					  "create hash table\n");
+-				inst->ratelimitInterval = 0;
+-			}
++	if(*inst->sockName == ':') {
++		listeners[nfd].bParseHost = 1;
++	} else {
++		listeners[nfd].bParseHost = 0;
++	}
++	if(inst->pLogHostName == NULL) {
++		listeners[nfd].hostName = NULL;
++	} else {
++		CHKiRet(prop.Construct(&(listeners[nfd].hostName)));
++		CHKiRet(prop.SetString(listeners[nfd].hostName, inst->pLogHostName, ustrlen(inst->pLogHostName)));
++		CHKiRet(prop.ConstructFinalize(listeners[nfd].hostName));
++	}
++	if(inst->ratelimitInterval > 0) {
++		if((listeners[nfd].ht = create_hashtable(100, hash_from_key_fn, key_equals_fn,
++			(void(*)(void*))ratelimitDestruct)) == NULL) {
++			/* in this case, we simply turn off rate-limiting */
++			DBGPRINTF("imuxsock: turning off rate limiting because we could not "
++				  "create hash table\n");
++			inst->ratelimitInterval = 0;
+ 		}
+-		listeners[nfd].ratelimitInterval = inst->ratelimitInterval;
+-		listeners[nfd].ratelimitBurst = inst->ratelimitBurst;
+-		listeners[nfd].ratelimitSev = inst->ratelimitSeverity;
+-		listeners[nfd].flowCtl = inst->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
+-		listeners[nfd].flags = inst->bIgnoreTimestamp ? IGNDATE : NOFLAG;
+-		listeners[nfd].bCreatePath = inst->bCreatePath;
+-		listeners[nfd].sockName = ustrdup(inst->sockName);
+-		listeners[nfd].bUseCreds = (inst->bDiscardOwnMsgs || inst->bWritePid || inst->ratelimitInterval || inst->bAnnotate || inst->bUseSysTimeStamp) ? 1 : 0;
+-		listeners[nfd].bAnnotate = inst->bAnnotate;
+-		listeners[nfd].bParseTrusted = inst->bParseTrusted;
+-		listeners[nfd].bDiscardOwnMsgs = inst->bDiscardOwnMsgs;
+-		listeners[nfd].bUnlink = inst->bUnlink;
+-		listeners[nfd].bWritePid = inst->bWritePid;
+-		listeners[nfd].bUseSysTimeStamp = inst->bUseSysTimeStamp;
+-		CHKiRet(ratelimitNew(&listeners[nfd].dflt_ratelimiter, "imuxsock", NULL));
+-		ratelimitSetLinuxLike(listeners[nfd].dflt_ratelimiter,
+-				      listeners[nfd].ratelimitInterval,
+-				      listeners[nfd].ratelimitBurst);
+-		ratelimitSetSeverity(listeners[nfd].dflt_ratelimiter,
+-				     listeners[nfd].ratelimitSev);
+-		nfd++;
+ 	} else {
+-		errmsg.LogError(0, NO_ERRCODE, "Out of unix socket name descriptors, ignoring %s\n",
+-			 inst->sockName);
++		listeners[nfd].ht = NULL;
+ 	}
++	listeners[nfd].ratelimitInterval = inst->ratelimitInterval;
++	listeners[nfd].ratelimitBurst = inst->ratelimitBurst;
++	listeners[nfd].ratelimitSev = inst->ratelimitSeverity;
++	listeners[nfd].flowCtl = inst->bUseFlowCtl ? eFLOWCTL_LIGHT_DELAY : eFLOWCTL_NO_DELAY;
++	listeners[nfd].flags = inst->bIgnoreTimestamp ? IGNDATE : NOFLAG;
++	listeners[nfd].bCreatePath = inst->bCreatePath;
++	listeners[nfd].sockName = ustrdup(inst->sockName);
++	listeners[nfd].bUseCreds = (inst->bDiscardOwnMsgs || inst->bWritePid || inst->ratelimitInterval || inst->bAnnotate || runModConf->bUseSysTimeStamp) ? 1 : 0;
++	listeners[nfd].bAnnotate = inst->bAnnotate;
++	listeners[nfd].bParseTrusted = inst->bParseTrusted;
++	listeners[nfd].bDiscardOwnMsgs = inst->bDiscardOwnMsgs;
++	listeners[nfd].bUnlink = inst->bUnlink;
++	listeners[nfd].bWritePid = inst->bWritePid;
++	listeners[nfd].bUseSysTimeStamp = inst->bUseSysTimeStamp;
++	CHKiRet(ratelimitNew(&listeners[nfd].dflt_ratelimiter, "imuxsock", NULL));
++	ratelimitSetLinuxLike(listeners[nfd].dflt_ratelimiter,
++			      listeners[nfd].ratelimitInterval,
++			      listeners[nfd].ratelimitBurst);
++	ratelimitSetSeverity(listeners[nfd].dflt_ratelimiter,
++			     listeners[nfd].ratelimitSev);
++	nfd++;
+ 
+ finalize_it:
+ 	RETiRet;
+@@ -1289,10 +1280,27 @@ ENDcheckCnf
+ 
+ BEGINactivateCnfPrePrivDrop
+ 	instanceConf_t *inst;
++	int nLstn;
++	int i;
+ CODESTARTactivateCnfPrePrivDrop
+ 	runModConf = pModConf;
++	/* we first calculate the number of listeners so that we can
++	 * appropriately size the listener array.
++	 */
++	nLstn = 0;
+ 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
+-		addListner(inst);
++		++nLstn;
++	}
++	if(nLstn > 0) {
++		DBGPRINTF("imuxsock: allocating memory for %d addtl listeners\n", nLstn);
++		CHKmalloc(listeners = realloc(listeners, (1+nLstn)*sizeof(lstn_t)));
++		for(i = 1 ; i < nLstn ; ++i) {
++			listeners[i].sockName = NULL;
++			listeners[i].fd  = -1;
++		}
++		for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
++			addListner(inst);
++		}
+ 	}
+ 	CHKiRet(activateListeners());
+ finalize_it:
+@@ -1422,6 +1430,7 @@ ENDafterRun
+ 
+ BEGINmodExit
+ CODESTARTmodExit
++	free(listeners);
+ 	if(pInputName != NULL)
+ 		prop.Destruct(&pInputName);
+ 
+@@ -1484,7 +1493,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
+ 
+ 
+ BEGINmodInit()
+-	int i;
+ CODESTARTmodInit
+ 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+ CODEmodInit_QueryRegCFSLineHdlr
+@@ -1515,6 +1523,7 @@ CODEmodInit_QueryRegCFSLineHdlr
+ 	pLocalHostIP = glbl.GetLocalHostIP();
+ 
+ 	/* init system log socket settings */
++	CHKmalloc(listeners = malloc(sizeof(lstn_t)));
+ 	listeners[0].flags = IGNDATE;
+ 	listeners[0].sockName = UCHAR_CONSTANT(_PATH_LOG);
+ 	listeners[0].hostName = NULL;
+@@ -1536,12 +1545,6 @@ CODEmodInit_QueryRegCFSLineHdlr
+ 		listeners[0].ratelimitInterval = 0;
+ 	}
+ 
+-	/* initialize socket names */
+-	for(i = 1 ; i < MAXFUNIX ; ++i) {
+-		listeners[i].sockName = NULL;
+-		listeners[i].fd  = -1;
+-	}
+-
+ 	/* register config file handlers */
+ 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputunixlistensocketignoremsgtimestamp", 0, eCmdHdlrBinary,
+ 		NULL, &cs.bIgnoreTimestamp, STD_LOADABLE_MODULE_ID));
+-- 
+1.9.0
+

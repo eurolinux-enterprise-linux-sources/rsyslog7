@@ -1,0 +1,28 @@
+From 63673c4d3d533fd356d2121c77aba8e1f2166165 Mon Sep 17 00:00:00 2001
+From: theinric <heinrich.tomas@gmail.com>
+Date: Wed, 4 Jun 2014 16:02:28 +0200
+Subject: [PATCH] Clean up system socket during shutdown
+
+This fixes a reasurce leak and also an issue with missing note
+about repeated messages that wasn't flushed
+---
+ plugins/imuxsock/imuxsock.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/plugins/imuxsock/imuxsock.c b/plugins/imuxsock/imuxsock.c
+index 8fda133..3c30501 100644
+--- a/plugins/imuxsock/imuxsock.c
++++ b/plugins/imuxsock/imuxsock.c
+@@ -447,6 +447,9 @@ static rsRetVal discardLogSockets(void)
+ 		ratelimitDestruct(listeners[i].dflt_ratelimiter);
+ 	}
+ 
++	hashtable_destroy(listeners[0].ht, 1); /* 1 => free all values automatically */
++	ratelimitDestruct(listeners[0].dflt_ratelimiter);
++
+ 	return RS_RET_OK;
+ }
+ 
+-- 
+1.9.0
+

@@ -1,0 +1,29 @@
+diff -ru rsyslog-7.4.10.orig/tools/rsyslogd.8 rsyslog-7.4.10/tools/rsyslogd.8
+--- rsyslog-7.4.10.orig/tools/rsyslogd.8	2014-06-05 16:24:47.080903050 +0200
++++ rsyslog-7.4.10/tools/rsyslogd.8	2014-06-05 16:43:13.875584693 +0200
+@@ -216,14 +216,14 @@
+ using the following:
+ .IP
+ .nf
+-kill -SIGNAL $(cat /var/run/rsyslogd.pid)
++kill -SIGNAL $(cat /var/run/syslogd.pid)
+ .fi
+ .PP
+ Note that -SIGNAL must be replaced with the actual signal
+ you are trying to send, e.g. with HUP. So it then becomes:
+ .IP
+ .nf
+-kill -HUP $(cat /var/run/rsyslogd.pid)
++kill -HUP $(cat /var/run/syslogd.pid)
+ .fi
+ .PP
+ .TP
+@@ -314,7 +314,7 @@
+ .I /dev/log
+ The Unix domain socket to from where local syslog messages are read.
+ .TP
+-.I /var/run/rsyslogd.pid
++.I /var/run/syslogd.pid
+ The file containing the process id of 
+ .BR rsyslogd .
+ .TP

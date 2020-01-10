@@ -1,0 +1,74 @@
+From 203aa44ca0a09d64e0535c134b868b4575735b8d Mon Sep 17 00:00:00 2001
+From: theinric <heinrich.tomas@gmail.com>
+Date: Thu, 5 Jun 2014 15:33:45 +0200
+Subject: [PATCH] Prevent division-by-zero exception
+
+---
+ grammar/rainerscript.c | 30 ++++++++++++++++++++++++++----
+ 1 file changed, 26 insertions(+), 4 deletions(-)
+
+diff --git a/grammar/rainerscript.c b/grammar/rainerscript.c
+index 18a8dda..5559873 100644
+--- a/grammar/rainerscript.c
++++ b/grammar/rainerscript.c
+@@ -1560,6 +1560,18 @@ evalStrArrayCmp(es_str_t *estr_l, struct cnfarray* ar, int cmpop)
+ 	ret->d.n = var2Number(&l, &convok_l) x var2Number(&r, &convok_r); \
+ 	FREE_BOTH_RET
+ 
++#define COMP_NUM_BINOP_DIV(x) \
++	cnfexprEval(expr->l, &l, usrptr); \
++	cnfexprEval(expr->r, &r, usrptr); \
++	ret->datatype = 'N'; \
++	if(var2Number(&r, &convok_r) == 0) { \
++		/* division by zero */ \
++		ret->d.n = 0; \
++	} else { \
++		ret->d.n = var2Number(&l, &convok_l) x var2Number(&r, &convok_r); \
++	} \
++	FREE_BOTH_RET
++
+ /* NOTE: array as right-hand argument MUST be handled by user */
+ #define PREP_TWO_STRINGS \
+ 		cnfexprEval(expr->l, &l, usrptr); \
+@@ -2040,10 +2052,10 @@ cnfexprEval(const struct cnfexpr *const expr, struct var *ret, void* usrptr)
+ 		COMP_NUM_BINOP(*);
+ 		break;
+ 	case '/':
+-		COMP_NUM_BINOP(/);
++		COMP_NUM_BINOP_DIV(/);
+ 		break;
+ 	case '%':
+-		COMP_NUM_BINOP(%);
++		COMP_NUM_BINOP_DIV(%);
+ 		break;
+ 	case 'M':
+ 		cnfexprEval(expr->r, &r, usrptr);
+@@ -2983,13 +2995,23 @@ cnfexprOptimize(struct cnfexpr *expr)
+ 	case '/':
+ 		if(getConstNumber(expr, &ln, &rn))  {
+ 			expr->nodetype = 'N';
+-			((struct cnfnumval*)expr)->val = ln / rn;
++			if(rn == 0) {
++				/* division by zero */
++				((struct cnfnumval*)expr)->val = 0;
++			} else {
++				((struct cnfnumval*)expr)->val = ln / rn;
++			}
+ 		}
+ 		break;
+ 	case '%':
+ 		if(getConstNumber(expr, &ln, &rn))  {
+ 			expr->nodetype = 'N';
+-			((struct cnfnumval*)expr)->val = ln % rn;
++			if(rn == 0) {
++				/* division by zero */
++				((struct cnfnumval*)expr)->val = 0;
++			} else {
++				((struct cnfnumval*)expr)->val = ln % rn;
++			}
+ 		}
+ 		break;
+ 	case CMP_NE:
+-- 
+1.9.0
+

@@ -1,0 +1,29 @@
+From 46050c5f03f735bdbf7b10a32d91cdb6c4ec2fcf Mon Sep 17 00:00:00 2001
+From: theinric <heinrich.tomas@gmail.com>
+Date: Thu, 29 May 2014 16:03:12 +0200
+Subject: [PATCH] Amend the rsyslog_conf manpage with syncing syntax
+
+---
+ tools/rsyslog.conf.5 | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/tools/rsyslog.conf.5 b/tools/rsyslog.conf.5
+index 07da6ff..fc45e3b 100644
+--- a/tools/rsyslog.conf.5
++++ b/tools/rsyslog.conf.5
+@@ -230,6 +230,12 @@ template, which, if not changed, uses RFC 3339 timestamps.
+ *.*     /var/log/file.log # log to a file with RFC3339 timestamps
+ .RE
+ 
++You may prefix each entry with the minus "-" sign to omit syncing the
++file after every logging. Note that you might lose information if the
++system crashes right behind a write attempt. Nevertheless this might
++give you back some performance, especially if you run programs that use
++logging in a very verbose manner.
++
+ .SS Named pipes
+ This version of rsyslogd(8) has support for logging output to named pipes (fifos). A fifo or 
+ named pipe can be used as a destination for log messages by prepending a pipe symbol ('|') 
+-- 
+1.9.0
+

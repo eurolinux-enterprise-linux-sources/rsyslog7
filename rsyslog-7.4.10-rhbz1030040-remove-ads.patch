@@ -1,0 +1,32 @@
+From 9e985175ae395faa2fb8b4925e4f73e5fc887cec Mon Sep 17 00:00:00 2001
+From: theinric <heinrich.tomas@gmail.com>
+Date: Thu, 15 May 2014 18:57:06 +0200
+Subject: [PATCH] Remove references to Google ads from html documentation
+
+diff --git a/doc/tls_cert_errmsgs.html b/doc/tls_cert_errmsgs.html
+index d002174..2943efc 100644
+--- a/doc/tls_cert_errmsgs.html
++++ b/doc/tls_cert_errmsgs.html
+@@ -21,19 +21,6 @@ Gerhards</a> (2008-06-17)</i></small></p>
+ 
+ <h3>Error Messages</h3>
+ <p>This page covers error message you may see when setting up
+-<span style="float: left">
+-<script type="text/javascript"><!--
+-google_ad_client = "pub-3204610807458280";
+-/* rsyslog doc inline */
+-google_ad_slot = "5958614527";
+-google_ad_width = 125;
+-google_ad_height = 125;
+-//-->
+-</script>
+-<script type="text/javascript"
+-src="http://pagead2.googlesyndication.com/pagead/show_ads.js">
+-</script>
+-</span>
+ <a href="http://www.rsyslog.com">rsyslog</a> with TLS. Please note that many
+ of the message stem back to the TLS library being used. In those cases, there is
+ not always a good explanation available in rsyslog alone.
+-- 
+1.9.0
+

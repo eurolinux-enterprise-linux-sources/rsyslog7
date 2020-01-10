@@ -1,0 +1,1089 @@
+diff -Npru -x '*~' a/Makefile.in b/Makefile.in
+--- a/Makefile.in	2014-06-09 11:49:32.773252347 +0200
++++ b/Makefile.in	2014-06-09 11:57:29.360086138 +0200
+@@ -85,8 +85,9 @@ sbin_PROGRAMS =
+ @ENABLE_MMJSONPARSE_TRUE@am__append_42 = plugins/mmjsonparse
+ @ENABLE_MMAUDIT_TRUE@am__append_43 = plugins/mmaudit
+ @ENABLE_MMANON_TRUE@am__append_44 = plugins/mmanon
+-@ENABLE_ORACLE_TRUE@am__append_45 = plugins/omoracle
+-@ENABLE_GUI_TRUE@am__append_46 = java
++@ENABLE_MMCOUNT_TRUE@am__append_45 = plugins/mmcount
++@ENABLE_ORACLE_TRUE@am__append_46 = plugins/omoracle
++@ENABLE_GUI_TRUE@am__append_47 = java
+ subdir = .
+ DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
+ 	$(srcdir)/Makefile.in $(srcdir)/config.h.in \
+@@ -231,7 +232,7 @@ DIST_SUBDIRS = doc compat runtime gramma
+ 	plugins/imptcp plugins/imttcp plugins/imdiag plugins/ommail \
+ 	plugins/omprog plugins/im3195 plugins/mmnormalize \
+ 	plugins/mmjsonparse plugins/mmaudit plugins/mmanon \
+-	plugins/omoracle java tests
++	plugins/mmcount plugins/omoracle java tests
+ DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
+ distdir = $(PACKAGE)-$(VERSION)
+ top_distdir = $(distdir)
+@@ -534,7 +535,7 @@ SUBDIRS = doc compat runtime grammar . p
+ 	$(am__append_37) $(am__append_38) $(am__append_39) \
+ 	$(am__append_40) $(am__append_41) $(am__append_42) \
+ 	$(am__append_43) $(am__append_44) $(am__append_45) \
+-	$(am__append_46) tests
++	$(am__append_46) $(am__append_47) tests
+ 
+ # make sure "make distcheck" tries to build all modules. This means that
+ # a developer must always have an environment where every supporting library
+diff -Npru -x '*~' a/configure b/configure
+--- a/configure	2014-06-09 11:49:32.786252343 +0200
++++ b/configure	2014-06-09 13:32:36.391610836 +0200
+@@ -690,6 +690,8 @@ ENABLE_RELP_FALSE
+ ENABLE_RELP_TRUE
+ RELP_LIBS
+ RELP_CFLAGS
++ENABLE_MMCOUNT_FALSE
++ENABLE_MMCOUNT_TRUE
+ ENABLE_MMANON_FALSE
+ ENABLE_MMANON_TRUE
+ ENABLE_MMAUDIT_FALSE
+@@ -977,6 +979,7 @@ enable_mmnormalize
+ enable_mmjsonparse
+ enable_mmaudit
+ enable_mmanon
++enable_mmcount
+ enable_relp
+ enable_guardtime
+ enable_cached_man_pages
+@@ -1722,6 +1725,7 @@ Optional Features:
+   --enable-mmjsonparse    Enable building mmjsonparse support [default=no]
+   --enable-mmaudit        Enable building mmaudit support [default=no]
+   --enable-mmanon         Enable building mmanon support [default=no]
++  --enable-mmcount        Enable message counting [default=no]
+   --enable-relp           Enable RELP support [default=no]
+   --enable-guardtime      Enable log file signing support (via GuardTime)
+                           [default=no]
+@@ -18311,6 +18315,29 @@ fi
+ 
+ 
+ 
++# mmcount
++# Check whether --enable-mmcount was given.
++if test "${enable_mmcount+set}" = set; then
++  enableval=$enable_mmcount; case "${enableval}" in
++         yes) enable_xmpp="yes" ;;
++          no) enable_xmpp="no" ;;
++           *) as_fn_error $? "bad value ${enableval} for --enable-mmcount" "$LINENO" 5 ;;
++         esac
++else
++  enable_mmcount=no
++
++fi
++
++ if test x$enable_mmcount = xyes; then
++  ENABLE_MMCOUNT_TRUE=
++  ENABLE_MMCOUNT_FALSE='#'
++else
++  ENABLE_MMCOUNT_TRUE='#'
++  ENABLE_MMCOUNT_FALSE=
++fi
++
++
++
+ # RELP support
+ # Check whether --enable-relp was given.
+ if test "${enable_relp+set}" = set; then :
+@@ -19974,7 +20001,7 @@ fi
+ 
+ # END HIREDIS SUPPORT
+ 
+-ac_config_files="$ac_config_files Makefile runtime/Makefile compat/Makefile grammar/Makefile tools/Makefile doc/Makefile plugins/imudp/Makefile plugins/imtcp/Makefile plugins/im3195/Makefile plugins/imgssapi/Makefile plugins/imuxsock/Makefile plugins/imjournal/Makefile plugins/immark/Makefile plugins/imklog/Makefile plugins/imkmsg/Makefile plugins/omhdfs/Makefile plugins/omprog/Makefile plugins/omstdout/Makefile plugins/omjournal/Makefile plugins/pmrfc3164sd/Makefile plugins/pmlastmsg/Makefile plugins/pmcisconames/Makefile plugins/pmsnare/Makefile plugins/pmaixforwardedfrom/Makefile plugins/omruleset/Makefile plugins/omuxsock/Makefile plugins/imfile/Makefile plugins/imsolaris/Makefile plugins/imptcp/Makefile plugins/imttcp/Makefile plugins/impstats/Makefile plugins/imrelp/Makefile plugins/imdiag/Makefile plugins/imzmq3/Makefile plugins/omtesting/Makefile plugins/omgssapi/Makefile plugins/ommysql/Makefile plugins/ompgsql/Makefile plugins/omrelp/Makefile plugins/omlibdbi/Makefile plugins/ommail/Makefile plugins/omsnmp/Makefile plugins/omoracle/Makefile plugins/omudpspoof/Makefile plugins/ommongodb/Makefile plugins/omhiredis/Makefile plugins/omzmq3/Makefile plugins/omrabbitmq/Makefile plugins/mmnormalize/Makefile plugins/mmjsonparse/Makefile plugins/mmaudit/Makefile plugins/mmanon/Makefile plugins/omelasticsearch/Makefile plugins/sm_cust_bindcdr/Makefile plugins/mmsnmptrapd/Makefile java/Makefile tests/Makefile"
++ac_config_files="$ac_config_files Makefile runtime/Makefile compat/Makefile grammar/Makefile tools/Makefile doc/Makefile plugins/imudp/Makefile plugins/imtcp/Makefile plugins/im3195/Makefile plugins/imgssapi/Makefile plugins/imuxsock/Makefile plugins/imjournal/Makefile plugins/immark/Makefile plugins/imklog/Makefile plugins/imkmsg/Makefile plugins/omhdfs/Makefile plugins/omprog/Makefile plugins/omstdout/Makefile plugins/omjournal/Makefile plugins/pmrfc3164sd/Makefile plugins/pmlastmsg/Makefile plugins/pmcisconames/Makefile plugins/pmsnare/Makefile plugins/pmaixforwardedfrom/Makefile plugins/omruleset/Makefile plugins/omuxsock/Makefile plugins/imfile/Makefile plugins/imsolaris/Makefile plugins/imptcp/Makefile plugins/imttcp/Makefile plugins/impstats/Makefile plugins/imrelp/Makefile plugins/imdiag/Makefile plugins/imzmq3/Makefile plugins/omtesting/Makefile plugins/omgssapi/Makefile plugins/ommysql/Makefile plugins/ompgsql/Makefile plugins/omrelp/Makefile plugins/omlibdbi/Makefile plugins/ommail/Makefile plugins/omsnmp/Makefile plugins/omoracle/Makefile plugins/omudpspoof/Makefile plugins/ommongodb/Makefile plugins/omhiredis/Makefile plugins/omzmq3/Makefile plugins/omrabbitmq/Makefile plugins/mmnormalize/Makefile plugins/mmjsonparse/Makefile plugins/mmaudit/Makefile plugins/mmanon/Makefile plugins/mmcount/Makefile plugins/omelasticsearch/Makefile plugins/sm_cust_bindcdr/Makefile plugins/mmsnmptrapd/Makefile java/Makefile tests/Makefile"
+ 
+ cat >confcache <<\_ACEOF
+ # This file is a shell script that caches the results of configure
+@@ -20241,6 +20268,10 @@ if test -z "${ENABLE_MMANON_TRUE}" && te
+   as_fn_error $? "conditional \"ENABLE_MMANON\" was never defined.
+ Usually this means the macro was only invoked conditionally." "$LINENO" 5
+ fi
++if test -z "${ENABLE_MMCOUNT_TRUE}" && test -z "${ENABLE_MMCOUNT_FALSE}"; then
++  as_fn_error $? "conditional \"ENABLE_MMCOUNT\" was never defined.
++Usually this means the macro was only invoked conditionally." "$LINENO" 5
++fi
+ if test -z "${ENABLE_RELP_TRUE}" && test -z "${ENABLE_RELP_FALSE}"; then
+   as_fn_error $? "conditional \"ENABLE_RELP\" was never defined.
+ Usually this means the macro was only invoked conditionally." "$LINENO" 5
+@@ -21293,6 +21324,7 @@ do
+     "plugins/mmjsonparse/Makefile") CONFIG_FILES="$CONFIG_FILES plugins/mmjsonparse/Makefile" ;;
+     "plugins/mmaudit/Makefile") CONFIG_FILES="$CONFIG_FILES plugins/mmaudit/Makefile" ;;
+     "plugins/mmanon/Makefile") CONFIG_FILES="$CONFIG_FILES plugins/mmanon/Makefile" ;;
++    "plugins/mmcount/Makefile") CONFIG_FILES="$CONFIG_FILES plugins/mmcount/Makefile" ;;
+     "plugins/omelasticsearch/Makefile") CONFIG_FILES="$CONFIG_FILES plugins/omelasticsearch/Makefile" ;;
+     "plugins/sm_cust_bindcdr/Makefile") CONFIG_FILES="$CONFIG_FILES plugins/sm_cust_bindcdr/Makefile" ;;
+     "plugins/mmsnmptrapd/Makefile") CONFIG_FILES="$CONFIG_FILES plugins/mmsnmptrapd/Makefile" ;;
+@@ -22673,6 +22705,7 @@ echo "    uuid support enabled:
+ echo "    Log file signing support:                 $enable_guardtime"
+ echo "    Log file encryption support:              $enable_libgcrypt"
+ echo "    anonymization support enabled:            $enable_mmanon"
++echo "    message counting support enabled:         $enable_mmcount"
+ echo
+ echo "---{ input plugins }---"
+ echo "    Klog functionality enabled:               $enable_klog ($os_type)"
+diff -Npru -x '*~' a/plugins/mmcount/Makefile.in b/plugins/mmcount/Makefile.in
+--- a/plugins/mmcount/Makefile.in	1970-01-01 01:00:00.000000000 +0100
++++ b/plugins/mmcount/Makefile.in	2014-06-09 13:58:27.604883790 +0200
+@@ -0,0 +1,612 @@
++# Makefile.in generated by automake 1.11.1 from Makefile.am.
++# @configure_input@
++
++# Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
++# 2003, 2004, 2005, 2006, 2007, 2008, 2009  Free Software Foundation,
++# Inc.
++# This Makefile.in is free software; the Free Software Foundation
++# gives unlimited permission to copy and/or distribute it,
++# with or without modifications, as long as this notice is preserved.
++
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY, to the extent permitted by law; without
++# even the implied warranty of MERCHANTABILITY or FITNESS FOR A
++# PARTICULAR PURPOSE.
++
++@SET_MAKE@
++
++VPATH = @srcdir@
++pkgdatadir = $(datadir)/@PACKAGE@
++pkgincludedir = $(includedir)/@PACKAGE@
++pkglibdir = $(libdir)/@PACKAGE@
++pkglibexecdir = $(libexecdir)/@PACKAGE@
++am__cd = CDPATH="$${ZSH_VERSION+.}$(PATH_SEPARATOR)" && cd
++install_sh_DATA = $(install_sh) -c -m 644
++install_sh_PROGRAM = $(install_sh) -c
++install_sh_SCRIPT = $(install_sh) -c
++INSTALL_HEADER = $(INSTALL_DATA)
++transform = $(program_transform_name)
++NORMAL_INSTALL = :
++PRE_INSTALL = :
++POST_INSTALL = :
++NORMAL_UNINSTALL = :
++PRE_UNINSTALL = :
++POST_UNINSTALL = :
++build_triplet = @build@
++host_triplet = @host@
++subdir = plugins/mmcount
++DIST_COMMON = $(srcdir)/Makefile.in
++ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
++am__aclocal_m4_deps = $(top_srcdir)/m4/atomic_operations.m4 \
++	$(top_srcdir)/m4/atomic_operations_64bit.m4 \
++	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
++	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
++	$(top_srcdir)/m4/lt~obsolete.m4 $(top_srcdir)/configure.ac
++am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
++	$(ACLOCAL_M4)
++mkinstalldirs = $(install_sh) -d
++CONFIG_HEADER = $(top_builddir)/config.h
++CONFIG_CLEAN_FILES =
++CONFIG_CLEAN_VPATH_FILES =
++am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
++am__vpath_adj = case $$p in \
++    $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
++    *) f=$$p;; \
++  esac;
++am__strip_dir = f=`echo $$p | sed -e 's|^.*/||'`;
++am__install_max = 40
++am__nobase_strip_setup = \
++  srcdirstrip=`echo "$(srcdir)" | sed 's/[].[^$$\\*|]/\\\\&/g'`
++am__nobase_strip = \
++  for p in $$list; do echo "$$p"; done | sed -e "s|$$srcdirstrip/||"
++am__nobase_list = $(am__nobase_strip_setup); \
++  for p in $$list; do echo "$$p $$p"; done | \
++  sed "s| $$srcdirstrip/| |;"' / .*\//!s/ .*/ ./; s,\( .*\)/[^/]*$$,\1,' | \
++  $(AWK) 'BEGIN { files["."] = "" } { files[$$2] = files[$$2] " " $$1; \
++    if (++n[$$2] == $(am__install_max)) \
++      { print $$2, files[$$2]; n[$$2] = 0; files[$$2] = "" } } \
++    END { for (dir in files) print dir, files[dir] }'
++am__base_list = \
++  sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
++  sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
++am__installdirs = "$(DESTDIR)$(pkglibdir)"
++LTLIBRARIES = $(pkglib_LTLIBRARIES)
++mmcount_la_DEPENDENCIES =
++am_mmcount_la_OBJECTS = mmcount_la-mmcount.lo
++mmcount_la_OBJECTS = $(am_mmcount_la_OBJECTS)
++AM_V_lt = $(am__v_lt_$(V))
++am__v_lt_ = $(am__v_lt_$(AM_DEFAULT_VERBOSITY))
++am__v_lt_0 = --silent
++mmcount_la_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
++	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
++	$(mmcount_la_LDFLAGS) $(LDFLAGS) -o $@
++DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
++depcomp = $(SHELL) $(top_srcdir)/depcomp
++am__depfiles_maybe = depfiles
++am__mv = mv -f
++COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
++	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
++LTCOMPILE = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
++	$(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) \
++	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
++	$(AM_CFLAGS) $(CFLAGS)
++AM_V_CC = $(am__v_CC_$(V))
++am__v_CC_ = $(am__v_CC_$(AM_DEFAULT_VERBOSITY))
++am__v_CC_0 = @echo "  CC    " $@;
++AM_V_at = $(am__v_at_$(V))
++am__v_at_ = $(am__v_at_$(AM_DEFAULT_VERBOSITY))
++am__v_at_0 = @
++CCLD = $(CC)
++LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
++	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
++	$(AM_LDFLAGS) $(LDFLAGS) -o $@
++AM_V_CCLD = $(am__v_CCLD_$(V))
++am__v_CCLD_ = $(am__v_CCLD_$(AM_DEFAULT_VERBOSITY))
++am__v_CCLD_0 = @echo "  CCLD  " $@;
++AM_V_GEN = $(am__v_GEN_$(V))
++am__v_GEN_ = $(am__v_GEN_$(AM_DEFAULT_VERBOSITY))
++am__v_GEN_0 = @echo "  GEN   " $@;
++SOURCES = $(mmcount_la_SOURCES)
++DIST_SOURCES = $(mmcount_la_SOURCES)
++ETAGS = etags
++CTAGS = ctags
++DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
++ACLOCAL = @ACLOCAL@
++AMTAR = @AMTAR@
++AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
++AR = @AR@
++AUTOCONF = @AUTOCONF@
++AUTOHEADER = @AUTOHEADER@
++AUTOMAKE = @AUTOMAKE@
++AWK = @AWK@
++CC = @CC@
++CCDEPMODE = @CCDEPMODE@
++CFLAGS = @CFLAGS@
++CPP = @CPP@
++CPPFLAGS = @CPPFLAGS@
++CURL_CFLAGS = @CURL_CFLAGS@
++CURL_LIBS = @CURL_LIBS@
++CYGPATH_W = @CYGPATH_W@
++CZMQ_CFLAGS = @CZMQ_CFLAGS@
++CZMQ_LIBS = @CZMQ_LIBS@
++DEFS = @DEFS@
++DEPDIR = @DEPDIR@
++DLLTOOL = @DLLTOOL@
++DL_LIBS = @DL_LIBS@
++DSYMUTIL = @DSYMUTIL@
++DUMPBIN = @DUMPBIN@
++ECHO_C = @ECHO_C@
++ECHO_N = @ECHO_N@
++ECHO_T = @ECHO_T@
++EGREP = @EGREP@
++EXEEXT = @EXEEXT@
++FGREP = @FGREP@
++GNUTLS_CFLAGS = @GNUTLS_CFLAGS@
++GNUTLS_LIBS = @GNUTLS_LIBS@
++GREP = @GREP@
++GSS_LIBS = @GSS_LIBS@
++GUARDTIME_CFLAGS = @GUARDTIME_CFLAGS@
++GUARDTIME_LIBS = @GUARDTIME_LIBS@
++HAVE_LIBGCRYPT_CONFIG = @HAVE_LIBGCRYPT_CONFIG@
++HAVE_MYSQL_CONFIG = @HAVE_MYSQL_CONFIG@
++HAVE_ORACLE_CONFIG = @HAVE_ORACLE_CONFIG@
++HAVE_PGSQL_CONFIG = @HAVE_PGSQL_CONFIG@
++HIREDIS_CFLAGS = @HIREDIS_CFLAGS@
++HIREDIS_LIBS = @HIREDIS_LIBS@
++IMUDP_LIBS = @IMUDP_LIBS@
++INSTALL = @INSTALL@
++INSTALL_DATA = @INSTALL_DATA@
++INSTALL_PROGRAM = @INSTALL_PROGRAM@
++INSTALL_SCRIPT = @INSTALL_SCRIPT@
++INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
++JSON_C_CFLAGS = @JSON_C_CFLAGS@
++JSON_C_LIBS = @JSON_C_LIBS@
++LD = @LD@
++LDFLAGS = @LDFLAGS@
++LEX = @LEX@
++LEXLIB = @LEXLIB@
++LEX_OUTPUT_ROOT = @LEX_OUTPUT_ROOT@
++LIBDBI_CFLAGS = @LIBDBI_CFLAGS@
++LIBDBI_LIBS = @LIBDBI_LIBS@
++LIBEE_CFLAGS = @LIBEE_CFLAGS@
++LIBEE_LIBS = @LIBEE_LIBS@
++LIBESTR_CFLAGS = @LIBESTR_CFLAGS@
++LIBESTR_LIBS = @LIBESTR_LIBS@
++LIBGCRYPT_CFLAGS = @LIBGCRYPT_CFLAGS@
++LIBGCRYPT_LIBS = @LIBGCRYPT_LIBS@
++LIBLOGGING_CFLAGS = @LIBLOGGING_CFLAGS@
++LIBLOGGING_LIBS = @LIBLOGGING_LIBS@
++LIBLOGGING_STDLOG_CFLAGS = @LIBLOGGING_STDLOG_CFLAGS@
++LIBLOGGING_STDLOG_LIBS = @LIBLOGGING_STDLOG_LIBS@
++LIBLOGNORM_CFLAGS = @LIBLOGNORM_CFLAGS@
++LIBLOGNORM_LIBS = @LIBLOGNORM_LIBS@
++LIBM = @LIBM@
++LIBMONGO_CLIENT_CFLAGS = @LIBMONGO_CLIENT_CFLAGS@
++LIBMONGO_CLIENT_LIBS = @LIBMONGO_CLIENT_LIBS@
++LIBOBJS = @LIBOBJS@
++LIBS = @LIBS@
++LIBSYSTEMD_JOURNAL_CFLAGS = @LIBSYSTEMD_JOURNAL_CFLAGS@
++LIBSYSTEMD_JOURNAL_LIBS = @LIBSYSTEMD_JOURNAL_LIBS@
++LIBTOOL = @LIBTOOL@
++LIBUUID_CFLAGS = @LIBUUID_CFLAGS@
++LIBUUID_LIBS = @LIBUUID_LIBS@
++LIPO = @LIPO@
++LN_S = @LN_S@
++LTLIBOBJS = @LTLIBOBJS@
++MAKEINFO = @MAKEINFO@
++MANIFEST_TOOL = @MANIFEST_TOOL@
++MKDIR_P = @MKDIR_P@
++MYSQL_CFLAGS = @MYSQL_CFLAGS@
++MYSQL_LIBS = @MYSQL_LIBS@
++NM = @NM@
++NMEDIT = @NMEDIT@
++OBJDUMP = @OBJDUMP@
++OBJEXT = @OBJEXT@
++ORACLE_CFLAGS = @ORACLE_CFLAGS@
++ORACLE_LIBS = @ORACLE_LIBS@
++OTOOL = @OTOOL@
++OTOOL64 = @OTOOL64@
++PACKAGE = @PACKAGE@
++PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
++PACKAGE_NAME = @PACKAGE_NAME@
++PACKAGE_STRING = @PACKAGE_STRING@
++PACKAGE_TARNAME = @PACKAGE_TARNAME@
++PACKAGE_VERSION = @PACKAGE_VERSION@
++PATH_SEPARATOR = @PATH_SEPARATOR@
++PGSQL_CFLAGS = @PGSQL_CFLAGS@
++PGSQL_LIBS = @PGSQL_LIBS@
++PKG_CONFIG = @PKG_CONFIG@
++PTHREADS_CFLAGS = @PTHREADS_CFLAGS@
++PTHREADS_LIBS = @PTHREADS_LIBS@
++RABBITMQ_CFLAGS = @RABBITMQ_CFLAGS@
++RABBITMQ_LIBS = @RABBITMQ_LIBS@
++RANLIB = @RANLIB@
++RELP_CFLAGS = @RELP_CFLAGS@
++RELP_LIBS = @RELP_LIBS@
++RSRT_CFLAGS = @RSRT_CFLAGS@
++RSRT_CFLAGS1 = @RSRT_CFLAGS1@
++RSRT_LIBS = @RSRT_LIBS@
++RSRT_LIBS1 = @RSRT_LIBS1@
++RST2MAN = @RST2MAN@
++RT_LIBS = @RT_LIBS@
++SED = @SED@
++SET_MAKE = @SET_MAKE@
++SHELL = @SHELL@
++SNMP_CFLAGS = @SNMP_CFLAGS@
++SNMP_LIBS = @SNMP_LIBS@
++SOL_LIBS = @SOL_LIBS@
++STRIP = @STRIP@
++UDPSPOOF_CFLAGS = @UDPSPOOF_CFLAGS@
++UDPSPOOF_LIBS = @UDPSPOOF_LIBS@
++VERSION = @VERSION@
++YACC = @YACC@
++YFLAGS = @YFLAGS@
++ZLIB_LIBS = @ZLIB_LIBS@
++abs_builddir = @abs_builddir@
++abs_srcdir = @abs_srcdir@
++abs_top_builddir = @abs_top_builddir@
++abs_top_srcdir = @abs_top_srcdir@
++ac_ct_AR = @ac_ct_AR@
++ac_ct_CC = @ac_ct_CC@
++ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
++am__include = @am__include@
++am__leading_dot = @am__leading_dot@
++am__quote = @am__quote@
++am__tar = @am__tar@
++am__untar = @am__untar@
++bindir = @bindir@
++build = @build@
++build_alias = @build_alias@
++build_cpu = @build_cpu@
++build_os = @build_os@
++build_vendor = @build_vendor@
++builddir = @builddir@
++datadir = @datadir@
++datarootdir = @datarootdir@
++docdir = @docdir@
++dvidir = @dvidir@
++exec_prefix = @exec_prefix@
++have_valgrind = @have_valgrind@
++host = @host@
++host_alias = @host_alias@
++host_cpu = @host_cpu@
++host_os = @host_os@
++host_vendor = @host_vendor@
++htmldir = @htmldir@
++includedir = @includedir@
++infodir = @infodir@
++install_sh = @install_sh@
++libdir = @libdir@
++libexecdir = @libexecdir@
++localedir = @localedir@
++localstatedir = @localstatedir@
++mandir = @mandir@
++mkdir_p = @mkdir_p@
++moddirs = @moddirs@
++oldincludedir = @oldincludedir@
++pdfdir = @pdfdir@
++prefix = @prefix@
++program_transform_name = @program_transform_name@
++psdir = @psdir@
++sbindir = @sbindir@
++sharedstatedir = @sharedstatedir@
++srcdir = @srcdir@
++sysconfdir = @sysconfdir@
++systemdsystemunitdir = @systemdsystemunitdir@
++target_alias = @target_alias@
++top_build_prefix = @top_build_prefix@
++top_builddir = @top_builddir@
++top_srcdir = @top_srcdir@
++pkglib_LTLIBRARIES = mmcount.la
++mmcount_la_SOURCES = mmcount.c
++mmcount_la_CPPFLAGS = $(RSRT_CFLAGS) $(PTHREADS_CFLAGS)
++mmcount_la_LDFLAGS = -module -avoid-version
++mmcount_la_LIBADD = 
++EXTRA_DIST = 
++all: all-am
++
++.SUFFIXES:
++.SUFFIXES: .c .lo .o .obj
++.PRECIOUS: Makefile
++Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
++	@case '$?' in \
++	  *config.status*) \
++	    cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh;; \
++	  *) \
++	    echo ' cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__depfiles_maybe)'; \
++	    cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@ $(am__depfiles_maybe);; \
++	esac;
++
++$(top_builddir)/config.status: $(top_srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
++	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
++
++$(top_srcdir)/configure:  $(am__configure_deps)
++	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
++$(ACLOCAL_M4):  $(am__aclocal_m4_deps)
++	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
++$(am__aclocal_m4_deps):
++install-pkglibLTLIBRARIES: $(pkglib_LTLIBRARIES)
++	@$(NORMAL_INSTALL)
++	test -z "$(pkglibdir)" || $(MKDIR_P) "$(DESTDIR)$(pkglibdir)"
++	@list='$(pkglib_LTLIBRARIES)'; test -n "$(pkglibdir)" || list=; \
++	list2=; for p in $$list; do \
++	  if test -f $$p; then \
++	    list2="$$list2 $$p"; \
++	  else :; fi; \
++	done; \
++	test -z "$$list2" || { \
++	  echo " $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL) $(INSTALL_STRIP_FLAG) $$list2 '$(DESTDIR)$(pkglibdir)'"; \
++	  $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL) $(INSTALL_STRIP_FLAG) $$list2 "$(DESTDIR)$(pkglibdir)"; \
++	}
++
++uninstall-pkglibLTLIBRARIES:
++	@$(NORMAL_UNINSTALL)
++	@list='$(pkglib_LTLIBRARIES)'; test -n "$(pkglibdir)" || list=; \
++	for p in $$list; do \
++	  $(am__strip_dir) \
++	  echo " $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f '$(DESTDIR)$(pkglibdir)/$$f'"; \
++	  $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=uninstall rm -f "$(DESTDIR)$(pkglibdir)/$$f"; \
++	done
++
++clean-pkglibLTLIBRARIES:
++	-test -z "$(pkglib_LTLIBRARIES)" || rm -f $(pkglib_LTLIBRARIES)
++	@list='$(pkglib_LTLIBRARIES)'; for p in $$list; do \
++	  dir="`echo $$p | sed -e 's|/[^/]*$$||'`"; \
++	  test "$$dir" != "$$p" || dir=.; \
++	  echo "rm -f \"$${dir}/so_locations\""; \
++	  rm -f "$${dir}/so_locations"; \
++	done
++mmcount.la: $(mmcount_la_OBJECTS) $(mmcount_la_DEPENDENCIES) 
++	$(AM_V_CCLD)$(mmcount_la_LINK) -rpath $(pkglibdir) $(mmcount_la_OBJECTS) $(mmcount_la_LIBADD) $(LIBS)
++
++mostlyclean-compile:
++	-rm -f *.$(OBJEXT)
++
++distclean-compile:
++	-rm -f *.tab.c
++
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mmcount_la-mmcount.Plo@am__quote@
++
++.c.o:
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
++@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(COMPILE) -c $<
++
++.c.obj:
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
++@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(COMPILE) -c `$(CYGPATH_W) '$<'`
++
++.c.lo:
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(LTCOMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Plo
++@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
++
++mmcount_la-mmcount.lo: mmcount.c
++@am__fastdepCC_TRUE@	$(AM_V_CC)$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(mmcount_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT mmcount_la-mmcount.lo -MD -MP -MF $(DEPDIR)/mmcount_la-mmcount.Tpo -c -o mmcount_la-mmcount.lo `test -f 'mmcount.c' || echo '$(srcdir)/'`mmcount.c
++@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/mmcount_la-mmcount.Tpo $(DEPDIR)/mmcount_la-mmcount.Plo
++@am__fastdepCC_FALSE@	$(AM_V_CC) @AM_BACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='mmcount.c' object='mmcount_la-mmcount.lo' libtool=yes @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(mmcount_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o mmcount_la-mmcount.lo `test -f 'mmcount.c' || echo '$(srcdir)/'`mmcount.c
++
++mostlyclean-libtool:
++	-rm -f *.lo
++
++clean-libtool:
++	-rm -rf .libs _libs
++
++ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
++	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
++	unique=`for i in $$list; do \
++	    if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
++	  done | \
++	  $(AWK) '{ files[$$0] = 1; nonempty = 1; } \
++	      END { if (nonempty) { for (i in files) print i; }; }'`; \
++	mkid -fID $$unique
++tags: TAGS
++
++TAGS:  $(HEADERS) $(SOURCES)  $(TAGS_DEPENDENCIES) \
++		$(TAGS_FILES) $(LISP)
++	set x; \
++	here=`pwd`; \
++	list='$(SOURCES) $(HEADERS)  $(LISP) $(TAGS_FILES)'; \
++	unique=`for i in $$list; do \
++	    if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
++	  done | \
++	  $(AWK) '{ files[$$0] = 1; nonempty = 1; } \
++	      END { if (nonempty) { for (i in files) print i; }; }'`; \
++	shift; \
++	if test -z "$(ETAGS_ARGS)$$*$$unique"; then :; else \
++	  test -n "$$unique" || unique=$$empty_fix; \
++	  if test $$# -gt 0; then \
++	    $(ETAGS) $(ETAGSFLAGS) $(AM_ETAGSFLAGS) $(ETAGS_ARGS) \
++	      "$$@" $$unique; \
++	  else \
++	    $(ETAGS) $(ETAGSFLAGS) $(AM_ETAGSFLAGS) $(ETAGS_ARGS) \
++	      $$unique; \
++	  fi; \
++	fi
++ctags: CTAGS
++CTAGS:  $(HEADERS) $(SOURCES)  $(TAGS_DEPENDENCIES) \
++		$(TAGS_FILES) $(LISP)
++	list='$(SOURCES) $(HEADERS)  $(LISP) $(TAGS_FILES)'; \
++	unique=`for i in $$list; do \
++	    if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
++	  done | \
++	  $(AWK) '{ files[$$0] = 1; nonempty = 1; } \
++	      END { if (nonempty) { for (i in files) print i; }; }'`; \
++	test -z "$(CTAGS_ARGS)$$unique" \
++	  || $(CTAGS) $(CTAGSFLAGS) $(AM_CTAGSFLAGS) $(CTAGS_ARGS) \
++	     $$unique
++
++GTAGS:
++	here=`$(am__cd) $(top_builddir) && pwd` \
++	  && $(am__cd) $(top_srcdir) \
++	  && gtags -i $(GTAGS_ARGS) "$$here"
++
++distclean-tags:
++	-rm -f TAGS ID GTAGS GRTAGS GSYMS GPATH tags
++
++distdir: $(DISTFILES)
++	@srcdirstrip=`echo "$(srcdir)" | sed 's/[].[^$$\\*]/\\\\&/g'`; \
++	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's/[].[^$$\\*]/\\\\&/g'`; \
++	list='$(DISTFILES)'; \
++	  dist_files=`for file in $$list; do echo $$file; done | \
++	  sed -e "s|^$$srcdirstrip/||;t" \
++	      -e "s|^$$topsrcdirstrip/|$(top_builddir)/|;t"`; \
++	case $$dist_files in \
++	  */*) $(MKDIR_P) `echo "$$dist_files" | \
++			   sed '/\//!d;s|^|$(distdir)/|;s,/[^/]*$$,,' | \
++			   sort -u` ;; \
++	esac; \
++	for file in $$dist_files; do \
++	  if test -f $$file || test -d $$file; then d=.; else d=$(srcdir); fi; \
++	  if test -d $$d/$$file; then \
++	    dir=`echo "/$$file" | sed -e 's,/[^/]*$$,,'`; \
++	    if test -d "$(distdir)/$$file"; then \
++	      find "$(distdir)/$$file" -type d ! -perm -700 -exec chmod u+rwx {} \;; \
++	    fi; \
++	    if test -d $(srcdir)/$$file && test $$d != $(srcdir); then \
++	      cp -fpR $(srcdir)/$$file "$(distdir)$$dir" || exit 1; \
++	      find "$(distdir)/$$file" -type d ! -perm -700 -exec chmod u+rwx {} \;; \
++	    fi; \
++	    cp -fpR $$d/$$file "$(distdir)$$dir" || exit 1; \
++	  else \
++	    test -f "$(distdir)/$$file" \
++	    || cp -p $$d/$$file "$(distdir)/$$file" \
++	    || exit 1; \
++	  fi; \
++	done
++check-am: all-am
++check: check-am
++all-am: Makefile $(LTLIBRARIES)
++installdirs:
++	for dir in "$(DESTDIR)$(pkglibdir)"; do \
++	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
++	done
++install: install-am
++install-exec: install-exec-am
++install-data: install-data-am
++uninstall: uninstall-am
++
++install-am: all-am
++	@$(MAKE) $(AM_MAKEFLAGS) install-exec-am install-data-am
++
++installcheck: installcheck-am
++install-strip:
++	$(MAKE) $(AM_MAKEFLAGS) INSTALL_PROGRAM="$(INSTALL_STRIP_PROGRAM)" \
++	  install_sh_PROGRAM="$(INSTALL_STRIP_PROGRAM)" INSTALL_STRIP_FLAG=-s \
++	  `test -z '$(STRIP)' || \
++	    echo "INSTALL_PROGRAM_ENV=STRIPPROG='$(STRIP)'"` install
++mostlyclean-generic:
++
++clean-generic:
++
++distclean-generic:
++	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
++	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
++
++maintainer-clean-generic:
++	@echo "This command is intended for maintainers to use"
++	@echo "it deletes files that may require special tools to rebuild."
++clean: clean-am
++
++clean-am: clean-generic clean-libtool clean-pkglibLTLIBRARIES \
++	mostlyclean-am
++
++distclean: distclean-am
++	-rm -rf ./$(DEPDIR)
++	-rm -f Makefile
++distclean-am: clean-am distclean-compile distclean-generic \
++	distclean-tags
++
++dvi: dvi-am
++
++dvi-am:
++
++html: html-am
++
++html-am:
++
++info: info-am
++
++info-am:
++
++install-data-am:
++
++install-dvi: install-dvi-am
++
++install-dvi-am:
++
++install-exec-am: install-pkglibLTLIBRARIES
++
++install-html: install-html-am
++
++install-html-am:
++
++install-info: install-info-am
++
++install-info-am:
++
++install-man:
++
++install-pdf: install-pdf-am
++
++install-pdf-am:
++
++install-ps: install-ps-am
++
++install-ps-am:
++
++installcheck-am:
++
++maintainer-clean: maintainer-clean-am
++	-rm -rf ./$(DEPDIR)
++	-rm -f Makefile
++maintainer-clean-am: distclean-am maintainer-clean-generic
++
++mostlyclean: mostlyclean-am
++
++mostlyclean-am: mostlyclean-compile mostlyclean-generic \
++	mostlyclean-libtool
++
++pdf: pdf-am
++
++pdf-am:
++
++ps: ps-am
++
++ps-am:
++
++uninstall-am: uninstall-pkglibLTLIBRARIES
++
++.MAKE: install-am install-strip
++
++.PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
++	clean-libtool clean-pkglibLTLIBRARIES ctags distclean \
++	distclean-compile distclean-generic distclean-libtool \
++	distclean-tags distdir dvi dvi-am html html-am info info-am \
++	install install-am install-data install-data-am install-dvi \
++	install-dvi-am install-exec install-exec-am install-html \
++	install-html-am install-info install-info-am install-man \
++	install-pdf install-pdf-am install-pkglibLTLIBRARIES \
++	install-ps install-ps-am install-strip installcheck \
++	installcheck-am installdirs maintainer-clean \
++	maintainer-clean-generic mostlyclean mostlyclean-compile \
++	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
++	tags uninstall uninstall-am uninstall-pkglibLTLIBRARIES
++
++
++# Tell versions [3.59,3.63) of GNU make to not export all variables.
++# Otherwise a system limit (for SysV at least) may be exceeded.
++.NOEXPORT:
+diff -Npru -x '*~' a/plugins/mmcount/mmcount.c b/plugins/mmcount/mmcount.c
+--- a/plugins/mmcount/mmcount.c	1970-01-01 01:00:00.000000000 +0100
++++ b/plugins/mmcount/mmcount.c	2014-06-09 13:36:47.286585653 +0200
+@@ -0,0 +1,342 @@
++/* mmcount.c
++ * count messages by priority or json property of given app-name.
++ *
++ * Copyright 2013 Red Hat Inc.
++ *
++ * This file is part of rsyslog.
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ * 
++ *       http://www.apache.org/licenses/LICENSE-2.0
++ *       -or-
++ *       see COPYING.ASL20 in the source distribution
++ * 
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++#include "config.h"
++#include "rsyslog.h"
++#include <stdio.h>
++#include <stdarg.h>
++#include <stdlib.h>
++#include <string.h>
++#include <assert.h>
++#include <signal.h>
++#include <errno.h>
++#include <unistd.h>
++#include <stdint.h>
++#include <json.h>
++#include "conf.h"
++#include "syslogd-types.h"
++#include "srUtils.h"
++#include "template.h"
++#include "module-template.h"
++#include "errmsg.h"
++#include "hashtable.h"
++
++#define JSON_COUNT_NAME "!mmcount"
++#define SEVERITY_COUNT 8
++
++MODULE_TYPE_OUTPUT
++MODULE_TYPE_NOKEEP
++MODULE_CNFNAME("mmcount")
++
++
++DEFobjCurrIf(errmsg);
++DEF_OMOD_STATIC_DATA
++
++/* config variables */
++
++typedef struct _instanceData {
++	char *pszAppName;
++	int severity[SEVERITY_COUNT];
++	char *pszKey;
++	char *pszValue;
++	int valueCounter;
++	struct hashtable *ht;
++} instanceData;
++
++struct modConfData_s {
++	rsconf_t *pConf;	/* our overall config object */
++};
++static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
++static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
++
++
++/* tables for interfacing with the v6 config system */
++/* action (instance) parameters */
++static struct cnfparamdescr actpdescr[] = {
++	{ "appname", eCmdHdlrGetWord, 0 },
++	{ "key", eCmdHdlrGetWord, 0 },
++	{ "value", eCmdHdlrGetWord, 0 },
++};
++static struct cnfparamblk actpblk =
++	{ CNFPARAMBLK_VERSION,
++	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
++	  actpdescr
++	};
++
++BEGINbeginCnfLoad
++CODESTARTbeginCnfLoad
++	loadModConf = pModConf;
++	pModConf->pConf = pConf;
++ENDbeginCnfLoad
++
++BEGINendCnfLoad
++CODESTARTendCnfLoad
++ENDendCnfLoad
++
++BEGINcheckCnf
++CODESTARTcheckCnf
++ENDcheckCnf
++
++BEGINactivateCnf
++CODESTARTactivateCnf
++	runModConf = pModConf;
++ENDactivateCnf
++
++BEGINfreeCnf
++CODESTARTfreeCnf
++ENDfreeCnf
++
++
++BEGINcreateInstance
++CODESTARTcreateInstance
++ENDcreateInstance
++
++
++BEGINisCompatibleWithFeature
++CODESTARTisCompatibleWithFeature
++ENDisCompatibleWithFeature
++
++
++BEGINfreeInstance
++CODESTARTfreeInstance
++ENDfreeInstance
++
++
++static inline void
++setInstParamDefaults(instanceData *pData)
++{
++	int i;
++
++	pData->pszAppName = NULL;
++	for (i = 0; i < SEVERITY_COUNT; i++)
++	        pData->severity[i] = 0;
++	pData->pszKey = NULL;
++	pData->pszValue = NULL;
++	pData->valueCounter = 0;
++	pData->ht = NULL;
++}
++
++static unsigned int
++hash_from_key_fn(void *k)
++{
++	return *(unsigned int *)k;
++}
++
++static int
++key_equals_fn(void *k1, void *k2)
++{
++	return (*(unsigned int *)k1 == *(unsigned int *)k2);
++}
++
++BEGINnewActInst
++	struct cnfparamvals *pvals;
++	int i;
++CODESTARTnewActInst
++	DBGPRINTF("newActInst (mmcount)\n");
++	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
++		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
++	}
++
++	CODE_STD_STRING_REQUESTnewActInst(1)
++	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
++	CHKiRet(createInstance(&pData));
++	setInstParamDefaults(pData);
++
++	for(i = 0 ; i < actpblk.nParams ; ++i) {
++		if(!pvals[i].bUsed)
++			continue;
++		if(!strcmp(actpblk.descr[i].name, "appname")) {
++			pData->pszAppName = es_str2cstr(pvals[i].val.d.estr, NULL);
++			continue;
++		}
++		if(!strcmp(actpblk.descr[i].name, "key")) {
++			pData->pszKey = es_str2cstr(pvals[i].val.d.estr, NULL);
++			continue;
++		}
++		if(!strcmp(actpblk.descr[i].name, "value")) {
++			pData->pszValue = es_str2cstr(pvals[i].val.d.estr, NULL);
++			continue;
++		}
++		dbgprintf("mmcount: program error, non-handled "
++			  "param '%s'\n", actpblk.descr[i].name);
++	}
++
++	if(pData->pszAppName == NULL) {
++		dbgprintf("mmcount: action requires a appname");
++		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
++	}
++
++	if(pData->pszKey != NULL && pData->pszValue == NULL) {
++		if(NULL == (pData->ht = create_hashtable(100, hash_from_key_fn, key_equals_fn, NULL))) {
++			DBGPRINTF("mmcount: error creating hash table!\n");
++			ABORT_FINALIZE(RS_RET_ERR);
++		}
++	}
++CODE_STD_FINALIZERnewActInst
++	cnfparamvalsDestruct(pvals, &actpblk);
++ENDnewActInst
++
++
++BEGINdbgPrintInstInfo
++CODESTARTdbgPrintInstInfo
++ENDdbgPrintInstInfo
++
++
++BEGINtryResume
++CODESTARTtryResume
++ENDtryResume
++
++static int *
++getCounter(struct hashtable *ht, char *str) {
++	unsigned int key;
++	int *pCounter;
++	unsigned int *pKey;
++
++	/* we dont store str as key, instead we store hash of the str
++	   as key to reduce memory usage */
++	key = hash_from_string(str);
++	pCounter = hashtable_search(ht, &key);
++	if(pCounter) {
++		return pCounter;
++	}
++
++	/* counter is not found for the str, so add new entry and
++	   return the counter */
++	if(NULL == (pKey = (unsigned int*)malloc(sizeof(unsigned int)))) {
++		DBGPRINTF("mmcount: memory allocation for key failed\n");
++		return NULL;
++	}
++	*pKey = key;
++
++	if(NULL == (pCounter = (int*)malloc(sizeof(int)))) {
++		DBGPRINTF("mmcount: memory allocation for value failed\n");
++		free(pKey);
++		return NULL;
++	}
++	*pCounter = 0;
++
++	if(!hashtable_insert(ht, pKey, pCounter)) {
++		DBGPRINTF("mmcount: inserting element into hashtable failed\n");
++		free(pKey);
++		free(pCounter);
++		return NULL;
++	}
++	return pCounter;
++}
++
++BEGINdoAction
++	msg_t *pMsg;
++	char *appname;
++	struct json_object *json = NULL;
++	es_str_t *estr = NULL;
++	struct json_object *keyjson = NULL;
++	char *pszValue;
++	int *pCounter;
++CODESTARTdoAction
++	pMsg = (msg_t*) ppString[0];
++	appname = getAPPNAME(pMsg, LOCK_MUTEX);
++
++	if(0 != strcmp(appname, pData->pszAppName)) {
++		/* we are not working for this appname. nothing to do */
++		ABORT_FINALIZE(RS_RET_OK);
++	}
++
++	if(!pData->pszKey) {
++		/* no key given for count, so we count severity */
++		if(pMsg->iSeverity <= SEVERITY_COUNT) {
++			pData->severity[pMsg->iSeverity]++;
++			json = json_object_new_int(pData->severity[pMsg->iSeverity]);
++		}
++		ABORT_FINALIZE(RS_RET_OK);
++	}
++
++	/* key is given, so get the property json */
++	estr = es_newStrFromBuf(pData->pszKey, strlen(pData->pszKey));
++	if(msgGetCEEPropJSON(pMsg, estr, &keyjson) != RS_RET_OK) {
++		/* key not found in the message. nothing to do */
++		ABORT_FINALIZE(RS_RET_OK);
++	}
++
++	/* key found, so get the value */
++	pszValue = (char*)json_object_get_string(keyjson);
++
++	if(pData->pszValue) {
++		/* value also given for count */
++		if(!strcmp(pszValue, pData->pszValue)) {
++			/* count for (value and key and appname) matched */
++			pData->valueCounter++;
++			json = json_object_new_int(pData->valueCounter);
++		}
++		ABORT_FINALIZE(RS_RET_OK);
++	}
++
++	/* value is not given, so we count for each value of given key */
++	pCounter = getCounter(pData->ht, pszValue);
++	if(pCounter) {
++		(*pCounter)++;
++		json = json_object_new_int(*pCounter);
++	}
++finalize_it:
++	if(estr) {
++		es_deleteStr(estr);
++	}
++
++	if(json) {
++		msgAddJSON(pMsg, (uchar *)JSON_COUNT_NAME, json);
++	}
++ENDdoAction
++
++
++BEGINparseSelectorAct
++CODESTARTparseSelectorAct
++CODE_STD_STRING_REQUESTparseSelectorAct(1)
++	if(strncmp((char*) p, ":mmcount:", sizeof(":mmcount:") - 1)) {
++		errmsg.LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
++			"mmcount supports only v6+ config format, use: "
++			"action(type=\"mmcount\" ...)");
++	}
++	ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
++CODE_STD_FINALIZERparseSelectorAct
++ENDparseSelectorAct
++
++
++BEGINmodExit
++CODESTARTmodExit
++	objRelease(errmsg, CORE_COMPONENT);
++ENDmodExit
++
++
++BEGINqueryEtryPt
++CODESTARTqueryEtryPt
++CODEqueryEtryPt_STD_OMOD_QUERIES
++CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
++CODEqueryEtryPt_STD_CONF2_QUERIES
++ENDqueryEtryPt
++
++
++
++BEGINmodInit()
++CODESTARTmodInit
++	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
++CODEmodInit_QueryRegCFSLineHdlr
++	DBGPRINTF("mmcount: module compiled with rsyslog version %s.\n", VERSION);
++	CHKiRet(objUse(errmsg, CORE_COMPONENT));
++ENDmodInit
