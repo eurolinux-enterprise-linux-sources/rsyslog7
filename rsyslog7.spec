@@ -7,7 +7,7 @@
 Summary: Enhanced system logging and kernel message trapping daemon
 Name: rsyslog7
 Version: 7.4.10
-Release: 2%{?dist}
+Release: 3%{?dist}
 License: (GPLv3+ and ASL 2.0)
 Group: System Environment/Daemons
 URL: http://www.rsyslog.com/
@@ -28,6 +28,7 @@ Patch8: rsyslog-7.4.10-rhbz1009882-pid-file.patch
 Patch9: rsyslog-7.4.10-rhbz1030040-remove-ads.patch
 Patch10: rsyslog-7.4.10-rhbz1030206-add-mmcount.patch
 Patch11: rsyslog-7.4.10-rhbz1096732-imuxsock-socket-limit.patch
+Patch12: rsyslog-7.4.10-rhbz1142373-cve-2014-3634.patch
 BuildRequires: bison
 BuildRequires: flex
 BuildRequires: json-c-devel
@@ -143,6 +144,7 @@ ability to send syslog messages as SNMPv1 and SNMPv2c traps.
 %patch9 -p1 -b .rhbz1030040
 %patch10 -p1 -b .rhbz1030206
 %patch11 -p1 -b .rhbz1096732
+%patch12 -p1 -b .rhbz1142373
 
 %build
 # workaround for mysql_conf multilib issue, bug #694414
@@ -320,6 +322,10 @@ mv /var/lock/subsys/rsyslogd /var/lock/subsys/rsyslog
 %{_libdir}/rsyslog/omsnmp.so
 
 %changelog
+* Thu Oct 09 2014 Tomas Heinrich <theinric@redhat.com> 7.4.10-3
+- fix CVE-2014-3634
+  resolves: #1149150
+
 * Fri Jun 06 2014 Tomas Heinrich <theinric@redhat.com> 7.4.10-2
 - amend rsyslog.conf man page with information on omitting file sync
   resolves: #994127
